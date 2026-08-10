@@ -633,15 +633,45 @@
     </div>
   </div>
 
+  <!-- RESET PASSWORD RECOVERY MODAL -->
+  <div class="modal-overlay" id="recoveryModal">
+    <div class="modal-card">
+      <div class="modal-icon" style="background: #FFF3E0; color: #FF5722;">
+        <i data-lucide="key" size="36"></i>
+      </div>
+      <h2 style="font-size: 22px; font-weight: 800; color: #18181B; margin-bottom: 8px;">Atur Ulang Password Resto 🔑</h2>
+      <p style="font-size: 14px; color: #71717A; margin-bottom: 20px; line-height: 1.5;">
+        Permintaan reset password telah diverifikasi! Silakan tekan tombol di bawah untuk membuka aplikasi Expo / Mobile POS Anda.
+      </p>
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+        <a id="expoDeepLinkBtn" href="exp://192.168.123.10:8081/--/reset-password" class="btn btn-outline" style="width: 100%; justify-content: center; background: #FFF3E0; border-color: #FF5722; color: #FF5722;">
+          <i data-lucide="smartphone" size="18"></i> Buka Aplikasi Expo Go / Dev
+        </a>
+        <a href="soodap://reset-password" class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 15px;">
+          <i data-lucide="store" size="18"></i> Buka Aplikasi Soodap POS
+        </a>
+      </div>
+    </div>
+  </div>
+
   <script>
     lucide.createIcons();
 
-    // Check if URL has verification tokens or error parameters from Supabase email confirmation
+    // Check if URL has verification tokens or recovery parameters from Supabase
     window.addEventListener('DOMContentLoaded', () => {
       const hash = window.location.hash;
       const search = window.location.search;
 
-      if (hash.includes('access_token=') || search.includes('type=signup') || hash.includes('type=recovery')) {
+      if (hash.includes('type=recovery') || search.includes('type=recovery')) {
+        const recoveryModal = document.getElementById('recoveryModal');
+        if (recoveryModal) {
+          recoveryModal.style.display = 'flex';
+          // Try opening Expo deep link automatically after 800ms
+          setTimeout(() => {
+            window.location.href = 'exp://192.168.123.10:8081/--/reset-password';
+          }, 800);
+        }
+      } else if (hash.includes('access_token=') || search.includes('type=signup')) {
         const modal = document.getElementById('verifyModal');
         if (modal) {
           modal.style.display = 'flex';

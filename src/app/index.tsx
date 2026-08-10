@@ -20,6 +20,7 @@ import { clearActiveSession, getActiveSession } from '../lib/session';
 import { showAlert as triggerGlobalAlert } from '../lib/alertStore';
 import { orderStore } from '../lib/orderStore';
 import { transactionStore } from '../lib/transactionStore';
+import { productStore, ProductItem } from '../lib/productStore';
 
 // Data Types
 type Category = 'Semua' | 'Coffee' | 'Non-Coffee' | 'Makanan' | 'Snack' | 'Dessert';
@@ -57,21 +58,8 @@ const INITIAL_CUSTOMERS: Customer[] = [
   { id: '4', name: 'Dimas Anggara', phone: '0878-1234-5678', isMember: false },
 ];
 
-// Dummy F&B Products with Images
-const SAMPLE_MENU: MenuItem[] = [
-  { id: '1', name: 'Kopi Susu Soodap', category: 'Coffee', price: 22000, stock: 45, iconName: 'cafe', iconColor: '#FF5722', imageSource: require('../../assets/images/kopi_susu.png') },
-  { id: '2', name: 'Americano Ice', category: 'Coffee', price: 18000, stock: 60, iconName: 'cafe-outline', iconColor: '#795548', imageSource: require('../../assets/images/kopi_susu.png') },
-  { id: '3', name: 'Caramel Macchiato', category: 'Coffee', price: 28000, stock: 30, iconName: 'color-fill', iconColor: '#D84315', imageSource: require('../../assets/images/kopi_susu.png') },
-  { id: '4', name: 'Matcha Latte Ice', category: 'Non-Coffee', price: 26000, stock: 25, iconName: 'leaf', iconColor: '#2E7D32', imageSource: require('../../assets/images/matcha_latte.png') },
-  { id: '5', name: 'Chocolate Hazelnut', category: 'Non-Coffee', price: 25000, stock: 40, iconName: 'nutrition', iconColor: '#4E342E', imageSource: require('../../assets/images/matcha_latte.png') },
-  { id: '6', name: 'Nasi Goreng Soodap', category: 'Makanan', price: 32000, stock: 20, iconName: 'restaurant', iconColor: '#F57C00', imageSource: require('../../assets/images/nasi_goreng.png') },
-  { id: '7', name: 'Mie Goreng Resto', category: 'Makanan', price: 28000, stock: 18, iconName: 'fast-food', iconColor: '#E65100', imageSource: require('../../assets/images/nasi_goreng.png') },
-  { id: '8', name: 'French Fries Cheese', category: 'Snack', price: 20000, stock: 50, iconName: 'pizza', iconColor: '#FBC02D', imageSource: require('../../assets/images/croissant.png') },
-  { id: '9', name: 'Croissant Butter', category: 'Snack', price: 24000, stock: 15, iconName: 'basket', iconColor: '#FFA000', imageSource: require('../../assets/images/croissant.png') },
-  { id: '10', name: 'Red Velvet Cake', category: 'Dessert', price: 35000, stock: 12, iconName: 'ice-cream', iconColor: '#C62828', imageSource: require('../../assets/images/croissant.png') },
-  { id: '11', name: 'Cheesecake Lotus', category: 'Dessert', price: 38000, stock: 10, iconName: 'heart', iconColor: '#AD1457', imageSource: require('../../assets/images/croissant.png') },
-  { id: '12', name: 'Es Teh Manis', category: 'Non-Coffee', price: 8000, stock: 100, iconName: 'wine', iconColor: '#EF6C00', imageSource: require('../../assets/images/kopi_susu.png') },
-];
+// Products from productStore
+const SAMPLE_MENU: MenuItem[] = [];
 
 const CATEGORIES: Category[] = ['Semua', 'Coffee', 'Non-Coffee', 'Makanan', 'Snack', 'Dessert'];
 
@@ -81,8 +69,31 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
+  // Reactive Product Store State
+  const [productState, setProductState] = useState(productStore.get());
+
+  useEffect(() => {
+    const unsubscribe = productStore.subscribe(() => {
+      setProductState(productStore.get());
+    });
+    return unsubscribe;
+  }, []);
+
+  const menuItems: MenuItem[] = (productState.products || []).map((p: ProductItem) => ({
+    id: p.id,
+    name: p.name,
+    category: p.category as any,
+    price: p.sellingPrice,
+    stock: p.stock,
+    iconName: 'restaurant-outline',
+    iconColor: '#FF5722',
+  }));
+
+  function setMenuItems(updater: (prev: MenuItem[]) => MenuItem[]) {
+    // Adapter if needed for stock updates
+  }
+
   // State Management
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(SAMPLE_MENU);
   const [activeTab, setActiveTab] = useState<NavTab>('pos');
   const [selectedCategory, setSelectedCategory] = useState<Category>('Semua');
   const [searchQuery, setSearchQuery] = useState('');
@@ -283,9 +294,7 @@ export default function HomeScreen() {
     const updatedStock = selectedStockItem.stock + addedQty;
     const updatedItem = { ...selectedStockItem, stock: updatedStock };
 
-    setMenuItems(prevMenu =>
-      prevMenu.map(m => (m.id === selectedStockItem.id ? updatedItem : m))
-    );
+    productStore.updateStock(selectedStockItem.id, addedQty);
 
     setCart(prevCart =>
       prevCart.map(ci =>
@@ -688,15 +697,9 @@ export default function HomeScreen() {
     setTimeout(() => {
       setPaymentSuccess(false);
       // Deduct stock based on purchased items
-      setMenuItems(prevMenu =>
-        prevMenu.map(m => {
-          const cartItem = cart.find(ci => ci.menuItem.id === m.id);
-          if (cartItem) {
-            return { ...m, stock: Math.max(0, m.stock - cartItem.quantity) };
-          }
-          return m;
-        })
-      );
+      cart.forEach(ci => {
+        productStore.updateStock(ci.menuItem.id, -ci.quantity);
+      });
 
       const changeAmount = paymentMethod === 'Tunai' ? Math.max(0, cashNum - grandTotal) : 0;
       const custName = selectedCustomer.name;

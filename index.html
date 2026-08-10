@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Soodap POS - Bisnis Resto Lancar, Senyum Lebar</title>
+  <meta name="description" content="Aplikasi Kasir POS F&B & Manajemen Restoran Terbaik di Indonesia. Offline-first, lacak stok HPP, rekap kasir shift, KDS dapur, & laporan keuangan real-time." />
+  
+  <!-- Favicon & Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root {
+      --primary: #FF5722;
+      --primary-hover: #E64A19;
+      --primary-light: #FFF3E0;
+      --secondary: #18181B;
+      --text-main: #27272A;
+      --text-muted: #71717A;
+      --bg-page: #FAFAFA;
+      --bg-card: #FFFFFF;
+      --border-color: #E4E4E7;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 10px 30px rgba(255, 87, 34, 0.08);
+      --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    /* ── NAVBAR ── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand-logo {
+      height: 44px;
+      width: auto;
+      display: block;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--primary);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+      box-shadow: 0 4px 14px rgba(255, 87, 34, 0.3);
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 87, 34, 0.4);
+    }
+
+    .btn-outline {
+      background-color: white;
+      color: var(--secondary);
+      border: 1.5px solid var(--border-color);
+    }
+
+    .btn-outline:hover {
+      background-color: #F4F4F5;
+      border-color: #D4D4D8;
+    }
+
+    /* ── HERO SECTION ── */
+    .hero {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 80px 24px 60px;
+      text-align: center;
+      position: relative;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 50px;
+      background-color: var(--primary-light);
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      border: 1px solid rgba(255, 87, 34, 0.2);
+    }
+
+    .hero h1 {
+      font-size: 48px;
+      font-weight: 800;
+      color: var(--secondary);
+      line-height: 1.25;
+      max-width: 900px;
+      margin: 0 auto 20px;
+      letter-spacing: -0.02em;
+    }
+
+    .hero h1 span {
+      color: var(--primary);
+      background: linear-gradient(135deg, #FF5722 0%, #FF8A65 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 18px;
+      color: var(--text-muted);
+      max-width: 680px;
+      margin: 0 auto 36px;
+      line-height: 1.6;
+    }
+
+    .hero-cta {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 50px;
+    }
+
+    .hero-features-list {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      flex-wrap: wrap;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .hero-features-list div {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── APP MOCKUP SHOWCASE ── */
+    .app-preview-container {
+      max-width: 1000px;
+      margin: 0 auto 100px;
+      padding: 0 24px;
+    }
+
+    .app-preview-box {
+      background: white;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.12);
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .app-header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 20px;
+    }
+
+    .dots {
+      display: flex;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .dot-red { background: #FF5F56; }
+    .dot-yellow { background: #FFBD2E; }
+    .dot-green { background: #27C93F; }
+
+    /* ── FEATURES GRID ── */
+    .features-section {
+      background: white;
+      padding: 100px 24px;
+      border-top: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .section-header {
+      text-align: center;
+      max-width: 640px;
+      margin: 0 auto 60px;
+    }
+
+    .section-header h2 {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--secondary);
+      margin-bottom: 12px;
+      letter-spacing: -0.01em;
+    }
+
+    .section-header p {
+      font-size: 16px;
+      color: var(--text-muted);
+    }
+
+    .grid-3 {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 32px;
+    }
+
+    .feature-card {
+      background: var(--bg-page);
+      padding: 32px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+      border-color: rgba(255, 87, 34, 0.3);
+    }
+
+    .feature-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: var(--radius-md);
+      background-color: var(--primary-light);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .feature-card h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--secondary);
+      margin-bottom: 10px;
+    }
+
+    .feature-card p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ── PRICING SECTION ── */
+    .pricing-section {
+      padding: 100px 24px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 32px;
+      margin-top: 40px;
+    }
+
+    .pricing-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      border: 1.5px solid var(--border-color);
+      padding: 36px;
+      position: relative;
+    }
+
+    .pricing-card.featured {
+      border-color: var(--primary);
+      box-shadow: 0 15px 35px rgba(255, 87, 34, 0.15);
+    }
+
+    .pricing-badge {
+      position: absolute;
+      top: -14px;
+      right: 24px;
+      background: var(--primary);
+      color: white;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 4px 14px;
+      border-radius: 50px;
+    }
+
+    .price {
+      font-size: 40px;
+      font-weight: 800;
+      color: var(--secondary);
+      margin: 16px 0;
+    }
+
+    .price span {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    /* ── VERIFICATION POPUP MODAL (AUTOMATIC DEEP LINK HANDLER) ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(6px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .modal-card {
+      background: white;
+      max-width: 440px;
+      width: 100%;
+      border-radius: var(--radius-lg);
+      padding: 36px;
+      text-align: center;
+      box-shadow: var(--shadow-lg);
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: #E8FFF1;
+      color: #10B981;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--secondary);
+      color: white;
+      padding: 60px 24px 30px;
+      border-top: 1px solid #27272A;
+    }
+
+    .footer-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 24px;
+      padding-bottom: 40px;
+      border-bottom: 1px solid #27272A;
+    }
+
+    .copyright {
+      max-width: 1200px;
+      margin: 24px auto 0;
+      text-align: center;
+      font-size: 13px;
+      color: #A1A1AA;
+    }
+
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 32px; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <header>
+    <div class="nav-container">
+      <img src="https://lh3.googleusercontent.com/d/1_tkN7OIkzVSikvXLu363-hklyvDIpgDF" alt="Soodap POS" class="brand-logo" />
+      <ul class="nav-links">
+        <li><a href="#fitur">Fitur Resto</a></li>
+        <li><a href="#keunggulan">Offline-First</a></li>
+        <li><a href="#harga">Paket Harga</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a href="soodap://login" class="btn btn-outline">Masuk Aplikasi</a>
+        <a href="#harga" class="btn btn-primary">Daftar Resto Baru</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO SECTION -->
+  <section class="hero">
+    <div class="hero-badge">
+      <i data-lucide="sparkles" size="16"></i> Aplikasi POS & Operasional Resto No. 1
+    </div>
+    <h1>Bisnis Resto Lancar, <span>Senyum Lebar</span></h1>
+    <p>
+      Kelola transaksi kasir, lacak stok resep HPP, rekap kasir shift, hingga layar kitchen KDS dapur secara otomatis. Bertransaksi 100% lancar meski internet terputus!
+    </p>
+
+    <div class="hero-cta">
+      <a href="soodap://login" class="btn btn-primary" style="padding: 16px 36px; font-size: 16px;">
+        <i data-lucide="store" size="20"></i> Mulai Coba Gratis
+      </a>
+      <a href="#fitur" class="btn btn-outline" style="padding: 16px 28px; font-size: 16px;">
+        <i data-lucide="play-circle" size="20"></i> Lihat Fitur Lengkap
+      </a>
+    </div>
+
+    <div class="hero-features-list">
+      <div><i data-lucide="check-circle-2" color="#10B981" size="18"></i> Offline-First Database</div>
+      <div><i data-lucide="check-circle-2" color="#10B981" size="18"></i> Auto Laporan Laba Rugi</div>
+      <div><i data-lucide="check-circle-2" color="#10B981" size="18"></i> Multi-Kasir & PIN Staf</div>
+      <div><i data-lucide="check-circle-2" color="#10B981" size="18"></i> Struk Bluetooth 58/80mm</div>
+    </div>
+  </section>
+
+  <!-- APP PREVIEW MOCKUP -->
+  <div class="app-preview-container">
+    <div class="app-preview-box">
+      <div class="app-header-bar">
+        <div class="dots">
+          <div class="dot dot-red"></div>
+          <div class="dot dot-yellow"></div>
+          <div class="dot dot-green"></div>
+        </div>
+        <span style="font-size: 12px; font-weight: 600; color: #71717A;">Soodap POS Dashboard - Outlet Senopati</span>
+        <span style="font-size: 12px; font-weight: 700; color: #10B981;">● Online & Terhubung</span>
+      </div>
+      <img src="https://lh3.googleusercontent.com/d/1_tkN7OIkzVSikvXLu363-hklyvDIpgDF" style="display: block; margin: 40px auto; max-width: 220px;" alt="Soodap POS System" />
+      <h3 style="text-align: center; color: #18181B; margin-bottom: 8px;">Tampilan Kasir POS Resto Modern</h3>
+      <p style="text-align: center; color: #71717A; font-size: 14px;">Desain antarmuka cepat, intuitif, dan responsif untuk tablet kasir & smartphone Android/iOS.</p>
+    </div>
+  </div>
+
+  <!-- FEATURES GRID -->
+  <section class="features-section" id="fitur">
+    <div class="section-header">
+      <h2>Fitur Lengkap untuk Resto & Cafe Anda</h2>
+      <p>Dirancang khusus untuk memenuhi semua kebutuhan operasional bisnis kuliner (F&B) modern.</p>
+    </div>
+
+    <div class="grid-3">
+      <div class="feature-card">
+        <div class="feature-icon"><i data-lucide="zap" size="26"></i></div>
+        <h3>Kasir POS Super Cepat</h3>
+        <p>Proses transaksi pesanan Dine In, Takeaway, dan Delivery dalam hitungan detik dengan kalkulasi pajak & diskon otomatis.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon"><i data-lucide="wifi-off" size="26"></i></div>
+        <h3>Teknologi Offline-First</h3>
+        <p>Mati mati gaya saat internet mati! Transaksi kasir tersimpan aman di database lokal dan otomatis tersinkron ke Supabase saat online.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon"><i data-lucide="boxes" size="26"></i></div>
+        <h3>Stok Bahan Baku & HPP</h3>
+        <p>Lacak pemakaian bahan makanan & kopi berdasarkan resep SOP secara otomatis. Ketahui HPP dan keuntungan bersih per porsi.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon"><i data-lucide="chef-hat" size="26"></i></div>
+        <h3>Kitchen Display (KDS)</h3>
+        <p>Layar tampilan pesanan langsung di meja dapur & bar. Pesanan masuk tanpa kertas nota hilang atau salah masak.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon"><i data-lucide="bar-chart-3" size="26"></i></div>
+        <h3>Rekap Kasir & Shift</h3>
+        <p>Laporan omzet harian, sisa uang kasir shift, pencatatan pengeluaran resto, dan audit laporan laba rugi real-time.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon"><i data-lucide="users" size="26"></i></div>
+        <h3>Hak Akses Staf & Absensi</h3>
+        <p>Atur 4-Digit PIN kasir, hak akses modul manajerial, serta absensi masuk shift karyawan dengan verifikasi foto selfie GPS.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING SECTION -->
+  <section class="pricing-section" id="harga">
+    <div class="section-header">
+      <h2>Pilih Paket Resto Anda</h2>
+      <p>Harga terjangkau tanpa biaya tersembunyi. Dapatkan dukungan penuh untuk pertumbuhan bisnis kuliner Anda.</p>
+    </div>
+
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <h3>Paket Starter Resto</h3>
+        <p style="color: var(--text-muted); font-size: 14px;">Cocok untuk kedai, booth, & usaha kuliner pemula.</p>
+        <div class="price">Rp 0 <span>/ bulan</span></div>
+        <ul style="list-style: none; margin: 24px 0; display: flex; flex-direction: column; gap: 12px; font-size: 14px; color: #3F3F46;">
+          <li>✓ 1 Outlet Resto</li>
+          <li>✓ Transaksi POS Tanpa Batas</li>
+          <li>✓ Database Lokal Offline-First</li>
+          <li>✓ Cetak Struk Bluetooth</li>
+        </ul>
+        <a href="soodap://login" class="btn btn-outline" style="width: 100%;">Daftar Gratis</a>
+      </div>
+
+      <div class="pricing-card featured">
+        <div class="pricing-badge">PALING POPULER</div>
+        <h3>Paket Pro Outlet</h3>
+        <p style="color: var(--text-muted); font-size: 14px;">Untuk cafe, restoran cabang, & bisnis F&B berkembang.</p>
+        <div class="price">Rp 99rb <span>/ bulan</span></div>
+        <ul style="list-style: none; margin: 24px 0; display: flex; flex-direction: column; gap: 12px; font-size: 14px; color: #3F3F46;">
+          <li>✓ Semua Fitur Paket Starter</li>
+          <li>✓ Sinkronisasi Cloud Supabase Realtime</li>
+          <li>✓ Kitchen Display System (KDS Dapur)</li>
+          <li>✓ Fitur Resep Bahan Baku & HPP</li>
+          <li>✓ Laporan Laba Rugi & Rekap Shift</li>
+        </ul>
+        <a href="soodap://login" class="btn btn-primary" style="width: 100%;">Mulai Coba 14 Hari Gratis</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-container">
+      <div>
+        <img src="https://lh3.googleusercontent.com/d/1_tkN7OIkzVSikvXLu363-hklyvDIpgDF" style="height: 40px; margin-bottom: 8px;" alt="Soodap POS" />
+        <p style="color: #A1A1AA; font-size: 14px;">Bisnis Resto Lancar, Senyum Lebar.</p>
+      </div>
+      <div style="display: flex; gap: 24px; color: #A1A1AA; font-size: 14px;">
+        <a href="#fitur">Fitur</a>
+        <a href="#harga">Harga</a>
+        <a href="#faq">Bantuan</a>
+      </div>
+    </div>
+    <div class="copyright">
+      &copy; 2026 Soodap POS. Seluruh Hak Cipta Dilindungi Undang-Undang.
+    </div>
+  </footer>
+
+  <!-- AUTOMATIC EMAIL VERIFICATION POPUP MODAL -->
+  <div class="modal-overlay" id="verifyModal">
+    <div class="modal-card">
+      <div class="modal-icon">
+        <i data-lucide="check-circle" size="40"></i>
+      </div>
+      <h2 style="font-size: 22px; font-weight: 800; color: #18181B; margin-bottom: 8px;">Email Berhasil Diverifikasi! 🎉</h2>
+      <p style="font-size: 14px; color: #71717A; margin-bottom: 24px; line-height: 1.6;">
+        Selamat! Akun outlet resto Anda di <strong>Soodap POS</strong> telah aktif. Silakan buka aplikasi mobile di HP Anda atau tekan tombol di bawah ini.
+      </p>
+      <a href="soodap://login" class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 15px;">
+        <i data-lucide="smartphone" size="18"></i> Buka Aplikasi Soodap POS
+      </a>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    // Check if URL has verification tokens or error parameters from Supabase email confirmation
+    window.addEventListener('DOMContentLoaded', () => {
+      const hash = window.location.hash;
+      const search = window.location.search;
+
+      if (hash.includes('access_token=') || search.includes('type=signup') || hash.includes('type=recovery')) {
+        const modal = document.getElementById('verifyModal');
+        if (modal) {
+          modal.style.display = 'flex';
+          // Try opening mobile deep link automatically after 800ms
+          setTimeout(() => {
+            window.location.href = 'soodap://login';
+          }, 800);
+        }
+      }
+    });
+  </script>
+</body>
+</html>

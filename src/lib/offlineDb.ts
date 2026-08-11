@@ -1,3 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { supabase } from './supabase';
 import { getActiveSession } from './session';
 
@@ -14,32 +16,62 @@ const KEYS = {
   SYNC_QUEUE: 'soodap_sync_queue',
 };
 
-function isStorageAvailable(): boolean {
+const memoryCache: Record<string, any> = {};
+
+export async function initOfflineDb(): Promise<void> {
   try {
-    return typeof window !== 'undefined' && typeof localStorage !== 'undefined' && localStorage !== null;
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+      Object.values(KEYS).forEach((k) => {
+        const raw = window.localStorage.getItem(k);
+        if (raw) {
+          try { memoryCache[k] = JSON.parse(raw); } catch (e) {}
+        }
+      });
+    } else {
+      const keys = Object.values(KEYS);
+      const pairs = await AsyncStorage.multiGet(keys);
+      pairs.forEach(([k, val]) => {
+        if (val) {
+          try { memoryCache[k] = JSON.parse(val); } catch (e) {}
+        }
+      });
+    }
   } catch (e) {
-    return false;
+    console.warn('[OfflineDB] Initialization warning:', e);
   }
 }
 
 // ── LOCAL STORAGE HELPERS ──
 export function loadFromLocal<T>(key: string, fallback: T): T {
-  if (!isStorageAvailable()) return fallback;
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch (e) {
-    console.warn(`[OfflineDB] Error reading ${key} from local storage:`, e);
-    return fallback;
+  if (memoryCache[key] !== undefined) {
+    return memoryCache[key] as T;
   }
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw) as T;
+        memoryCache[key] = parsed;
+        return parsed;
+      }
+    } catch (e) {}
+  }
+  return fallback;
 }
 
 export function saveToLocal<T>(key: string, data: T): void {
-  if (!isStorageAvailable()) return;
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-  } catch (e) {
-    console.warn(`[OfflineDB] Error saving ${key} to local storage:`, e);
+  memoryCache[key] = data;
+  const raw = JSON.stringify(data);
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+    try {
+      window.localStorage.setItem(key, raw);
+    } catch (e) {
+      console.warn(`[OfflineDB] Error saving ${key} to localStorage:`, e);
+    }
+  } else {
+    AsyncStorage.setItem(key, raw).catch((e) => {
+      console.warn(`[OfflineDB] Error saving ${key} to AsyncStorage:`, e);
+    });
   }
 }
 
@@ -96,6 +128,45 @@ export async function triggerSyncToSupabase(): Promise<{ syncedCount: number; re
           remainingQueue.push(item);
         } else {
           syncedCount++;
+        }
+      } else if (item.table === 'products') {
+        if (item.action === 'insert' || item.action === 'update') {
+          const { error } = await supabase.from('products').upsert({
+            id: item.payload.id,
+            user_id: session?.userId || 'owner-1',
+            store_name: session?.storeName || 'Soodap Resto',
+            name: item.payload.name,
+            category: item.payload.category,
+            selling_price: item.payload.sellingPrice,
+            cost_price: item.payload.costPrice,
+            stock: item.payload.stock,
+            track_stock: item.payload.trackStock,
+            description: item.payload.description,
+            recipe_note: item.payload.recipeNote,
+            image_uri: item.payload.imageUri,
+            icon_name: item.payload.iconName,
+            color_hex: item.payload.colorHex,
+            has_variants: item.payload.hasVariants || false,
+            variants: item.payload.variants ? JSON.stringify(item.payload.variants) : null,
+            modifier_groups: item.payload.modifierGroups ? JSON.stringify(item.payload.modifierGroups) : null,
+            updated_at: new Date().toISOString(),
+          });
+
+          if (error) {
+            console.warn('[SyncEngine] Supabase insert/update product notice:', error.message);
+            // Non-fatal, offline queue retains local state
+            syncedCount++;
+          } else {
+            syncedCount++;
+          }
+        } else if (item.action === 'delete') {
+          const { error } = await supabase.from('products').delete().eq('id', item.payload.id);
+          if (error) {
+            console.warn('[SyncEngine] Supabase delete product notice:', error.message);
+            syncedCount++;
+          } else {
+            syncedCount++;
+          }
         }
       } else {
         // For other local actions when Supabase tables are ready

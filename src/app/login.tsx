@@ -40,13 +40,14 @@ export default function LoginScreen() {
 
   // 1. Email & Password Login Handler
   async function handleEmailLogin() {
-    if (!email || !password) {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !password) {
       showAlert('Perhatian', 'Harap isi Email dan Password Anda.');
       return;
     }
     setLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
+      email: cleanEmail,
       password,
     });
     setLoading(false);
@@ -56,12 +57,12 @@ export default function LoginScreen() {
       if (msg.includes('email not confirmed')) {
         showAlert(
           'Email Belum Dikonfirmasi 📩',
-          `Akun ${email.trim()} sudah terdaftar tetapi belum dikonfirmasi.\n\nSilakan periksa kotak masuk/spam email Anda dan klik tombol 'Konfirmasi Akun Resto' agar bisa masuk.`
+          `Akun ${cleanEmail} sudah terdaftar tetapi link verifikasi di email belum diklik.\n\nSilakan periksa kotak masuk/spam Gmail Anda dan klik 'Konfirmasi Akun Resto', atau matikan 'Confirm email' di Supabase Dashboard.`
         );
       } else if (msg.includes('invalid login credentials') || msg.includes('invalid_grant')) {
         showAlert(
-          'Password atau Email Salah 🔒',
-          'Email atau password yang Anda masukkan tidak cocok.\n\nHarap periksa kembali ketikan password Anda, atau gunakan tombol Lupa Password jika lupa.'
+          'Password atau Email Belum Cocok 🔒',
+          `Login untuk "${cleanEmail}" ditolak oleh Supabase.\n\nPenyebab utama:\n1. Email pendaftaran belum di-klik verifikasinya di Gmail.\n2. Password yang diketik ada salah huruf/kapital.\n\n💡 Tip: Cek link di Gmail Anda atau gunakan tombol Lupa Password.`
         );
       } else {
         showAlert('Gagal Masuk', error.message);
@@ -138,13 +139,14 @@ export default function LoginScreen() {
 
   // 4. Register Store Handler
   async function handleRegisterStore() {
-    if (!email || !password || !storeName) {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !password || !storeName) {
       showAlert('Perhatian', 'Harap lengkapi semua data pendaftaran resto.');
       return;
     }
     setLoading(true);
     const { error } = await supabase.auth.signUp({
-      email: email.trim(),
+      email: cleanEmail,
       password,
       options: {
         emailRedirectTo: Linking.createURL('/login'),
@@ -161,7 +163,7 @@ export default function LoginScreen() {
     } else {
       showAlert(
         'Pendaftaran Berhasil! 📩',
-        `Link verifikasi telah dikirimkan ke email ${email.trim()}.\n\nSilakan cek kotak masuk email Anda dan klik link konfirmasi untuk mengaktifkan akun resto Anda.`
+        `Link verifikasi telah dikirimkan ke email ${cleanEmail}.\n\nSilakan cek kotak masuk email Anda dan klik link konfirmasi untuk mengaktifkan akun resto Anda.`
       );
       setScreenMode('email');
     }

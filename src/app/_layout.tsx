@@ -19,7 +19,8 @@ import {
 
 SplashScreen.preventAutoHideAsync();
 
-import { getActiveSession } from '../lib/session';
+import { getActiveSession, initSession } from '../lib/session';
+import { initOfflineDb } from '../lib/offlineDb';
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -28,14 +29,30 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    async function initializeAuth() {
+      try {
+        await Promise.all([
+          initSession(),
+          initOfflineDb(),
+        ]);
+        const { data } = await supabase.auth.getSession();
+        setSession(data.session);
+      } catch (e) {
+        console.warn('Auth initialization error:', e);
+      } finally {
+        setIsReady(true);
+      }
+    }
+
+    initializeAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      setIsReady(true);
     });
 
-    supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -82,8 +99,8 @@ export default function TabLayout() {
   }
 
   return (
-    <TamaguiProvider config={tamaguiConfig} defaultTheme={colorScheme === 'dark' ? 'dark' : 'light'}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
+      <ThemeProvider value={DefaultTheme}>
         <AuthGuard>
           <Slot />
           <CustomAlertModal />

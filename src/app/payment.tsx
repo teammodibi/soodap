@@ -312,30 +312,39 @@ export default function PaymentScreen() {
                 </YStack>
               ) : (
                 <YStack gap={8}>
-                  {cart.map(item => (
-                    <XStack
-                      key={item.menuItem.id}
-                      backgroundColor="#FAFAFA"
-                      p={10}
-                      br={12}
-                      borderWidth={1}
-                      borderColor="#F4F4F5"
-                      jc="space-between"
-                      ai="center"
-                    >
-                      <YStack f={1} mr={8}>
-                        <Text fontFamily="Geist_700Bold" fontSize={13} color="#18181B" numberOfLines={1}>
-                          {item.menuItem.name}
+                  {cart.map(item => {
+                    const effectiveUnitPrice = item.unitPrice ?? item.menuItem.price;
+                    return (
+                      <XStack
+                        key={item.id || item.menuItem.id}
+                        backgroundColor="#FAFAFA"
+                        p={10}
+                        br={12}
+                        borderWidth={1}
+                        borderColor="#F4F4F5"
+                        jc="space-between"
+                        ai="center"
+                      >
+                        <YStack f={1} mr={8}>
+                          <Text fontFamily="Geist_700Bold" fontSize={13} color="#18181B" numberOfLines={1}>
+                            {item.menuItem.name}
+                          </Text>
+                          {item.selectedVariant && (
+                            <Text fontFamily="Geist_500Medium" fontSize={11} color="#3F3F46">• Varian: {item.selectedVariant.name}</Text>
+                          )}
+                          {item.selectedModifiers && item.selectedModifiers.length > 0 && (
+                            <Text fontFamily="Geist_400Regular" fontSize={11} color="#71717A">• {item.selectedModifiers.map(m => m.optionName).join(', ')}</Text>
+                          )}
+                          <Text fontFamily="Geist_400Regular" fontSize={11} color="#71717A">
+                            {item.quantity}x @ Rp {effectiveUnitPrice.toLocaleString('id-ID')}
+                          </Text>
+                        </YStack>
+                        <Text fontFamily="Geist_800ExtraBold" fontSize={13} color="#FF5722">
+                          Rp {(effectiveUnitPrice * item.quantity).toLocaleString('id-ID')}
                         </Text>
-                        <Text fontFamily="Geist_400Regular" fontSize={11} color="#71717A">
-                          {item.quantity}x @ Rp {item.menuItem.price.toLocaleString('id-ID')}
-                        </Text>
-                      </YStack>
-                      <Text fontFamily="Geist_800ExtraBold" fontSize={13} color="#FF5722">
-                        Rp {(item.menuItem.price * item.quantity).toLocaleString('id-ID')}
-                      </Text>
-                    </XStack>
-                  ))}
+                      </XStack>
+                    );
+                  })}
                 </YStack>
               )}
 

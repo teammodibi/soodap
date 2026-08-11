@@ -20,10 +20,11 @@ import { clearActiveSession, getActiveSession } from '../lib/session';
 import { showAlert as triggerGlobalAlert } from '../lib/alertStore';
 import { orderStore } from '../lib/orderStore';
 import { transactionStore } from '../lib/transactionStore';
-import { productStore, ProductItem } from '../lib/productStore';
+import { productStore, ProductItem, ProductVariant, ModifierGroup } from '../lib/productStore';
+import { SelectedModifier } from '../lib/orderStore';
 
 // Data Types
-type Category = 'Semua' | 'Coffee' | 'Non-Coffee' | 'Makanan' | 'Snack' | 'Dessert';
+type Category = string;
 type OrderType = 'Dine In' | 'Takeaway' | 'Delivery';
 type NavTab = 'pos' | 'cart' | 'summary' | 'kds';
 
@@ -35,11 +36,19 @@ interface MenuItem {
   stock: number;
   iconName: string;
   iconColor: string;
+  imageUri?: string;
   imageSource?: any;
+  hasVariants?: boolean;
+  variants?: ProductVariant[];
+  modifierGroups?: ModifierGroup[];
 }
 
 interface CartItem {
+  id?: string;
   menuItem: MenuItem;
+  selectedVariant?: ProductVariant;
+  selectedModifiers?: SelectedModifier[];
+  unitPrice?: number;
   quantity: number;
   note?: string;
 }
@@ -79,14 +88,24 @@ export default function HomeScreen() {
     return unsubscribe;
   }, []);
 
+  const categoriesWithProducts = Array.from(
+    new Set((productState.products || []).map((p: ProductItem) => p.category).filter(Boolean))
+  );
+
+  const dynamicCategories: string[] = ['Semua', ...categoriesWithProducts];
+
   const menuItems: MenuItem[] = (productState.products || []).map((p: ProductItem) => ({
     id: p.id,
     name: p.name,
     category: p.category as any,
     price: p.sellingPrice,
     stock: p.stock,
-    iconName: 'restaurant-outline',
-    iconColor: '#FF5722',
+    iconName: p.iconName || 'restaurant-outline',
+    iconColor: p.colorHex || '#FF5722',
+    imageUri: p.imageUri,
+    hasVariants: p.hasVariants,
+    variants: p.variants,
+    modifierGroups: p.modifierGroups,
   }));
 
   function setMenuItems(updater: (prev: MenuItem[]) => MenuItem[]) {
@@ -127,6 +146,12 @@ export default function HomeScreen() {
   const [selectedQtyItem, setSelectedQtyItem] = useState<CartItem | MenuItem | null>(null);
   const [qtyInputText, setQtyInputText] = useState('');
   const qtySlideAnim = useRef(new Animated.Value(500)).current;
+
+  // Variant & Modifier Modal State
+  const [variantModalVisible, setVariantModalVisible] = useState(false);
+  const [selectedVariantItem, setSelectedVariantItem] = useState<MenuItem | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  const [selectedModifiersState, setSelectedModifiersState] = useState<Record<string, SelectedModifier[]>>({});
 
   // Custom Alert Modal State
   const [customAlert, setCustomAlert] = useState<{
@@ -574,7 +599,37 @@ export default function HomeScreen() {
   // Cart Functions
   function addToCart(item: MenuItem) {
     const currentItem = menuItems.find(m => m.id === item.id) || item;
-    const existingIndex = cart.findIndex(ci => ci.menuItem.id === currentItem.id);
+    const hasVar = (currentItem.hasVariants && currentItem.variants && currentItem.variants.length > 0);
+    const hasMod = (currentItem.modifierGroups && currentItem.modifierGroups.length > 0);
+
+    if (hasVar || hasMod) {
+      setSelectedVariantItem(currentItem);
+      setSelectedVariant(currentItem.variants && currentItem.variants.length > 0 ? currentItem.variants[0] : null);
+
+      const initialMods: Record<string, SelectedModifier[]> = {};
+      if (currentItem.modifierGroups) {
+        currentItem.modifierGroups.forEach(g => {
+          if (g.isRequired && g.options && g.options.length > 0) {
+            initialMods[g.id] = [{
+              groupId: g.id,
+              groupName: g.name,
+              optionId: g.options[0].id,
+              optionName: g.options[0].name,
+              price: g.options[0].price,
+            }];
+          }
+        });
+      }
+      setSelectedModifiersState(initialMods);
+      setVariantModalVisible(true);
+      return;
+    }
+
+    addToCartDirect(currentItem);
+  }
+
+  function addToCartDirect(currentItem: MenuItem) {
+    const existingIndex = cart.findIndex(ci => ci.menuItem.id === currentItem.id && !ci.selectedVariant && (!ci.selectedModifiers || ci.selectedModifiers.length === 0));
     const qtyInCart = existingIndex > -1 ? cart[existingIndex].quantity : 0;
 
     if (currentItem.stock <= 0) {
@@ -601,14 +656,16 @@ export default function HomeScreen() {
         updated[existingIndex].quantity += 1;
         return updated;
       }
-      return [...prevCart, { menuItem: currentItem, quantity: 1 }];
+      return [...prevCart, { menuItem: currentItem, quantity: 1, unitPrice: currentItem.price }];
     });
   }
 
-  function updateQuantity(itemId: string, delta: number) {
-    const currentItem = menuItems.find(m => m.id === itemId);
-    const existingIndex = cart.findIndex(ci => ci.menuItem.id === itemId);
-    const qtyInCart = existingIndex > -1 ? cart[existingIndex].quantity : 0;
+  function updateQuantity(cartItemId: string, delta: number) {
+    const existingItem = cart.find(ci => (ci.id || ci.menuItem.id) === cartItemId);
+    if (!existingItem) return;
+
+    const currentItem = menuItems.find(m => m.id === existingItem.menuItem.id) || existingItem.menuItem;
+    const qtyInCart = existingItem.quantity;
 
     if (delta > 0 && currentItem) {
       if (currentItem.stock <= 0) {
@@ -632,7 +689,7 @@ export default function HomeScreen() {
     setCart(prevCart => {
       return prevCart
         .map(ci => {
-          if (ci.menuItem.id === itemId) {
+          if ((ci.id || ci.menuItem.id) === cartItemId) {
             const newQty = ci.quantity + delta;
             return newQty > 0 ? { ...ci, quantity: newQty } : null;
           }
@@ -664,7 +721,7 @@ export default function HomeScreen() {
 
   // Calculations
   const totalItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotal = cart.reduce((sum, item) => sum + item.menuItem.price * item.quantity, 0);
+  const subtotal = cart.reduce((sum, item) => sum + (item.unitPrice ?? item.menuItem.price) * item.quantity, 0);
   const taxAndService = Math.round(subtotal * 0.1); // 10% tax
   const grandTotal = subtotal + taxAndService;
 
@@ -712,9 +769,9 @@ export default function HomeScreen() {
         items: cart.map(ci => ({
           name: ci.menuItem.name,
           quantity: ci.quantity,
-          price: ci.menuItem.price,
-          subtotal: ci.menuItem.price * ci.quantity,
-          note: ci.note,
+          price: ci.unitPrice ?? ci.menuItem.price,
+          subtotal: (ci.unitPrice ?? ci.menuItem.price) * ci.quantity,
+          note: ci.note ? `${ci.note}${ci.selectedVariant ? ` | ${ci.selectedVariant.name}` : ''}${ci.selectedModifiers && ci.selectedModifiers.length > 0 ? ` | ${ci.selectedModifiers.map(m => m.optionName).join(', ')}` : ''}` : `${ci.selectedVariant ? `Varian: ${ci.selectedVariant.name}` : ''}${ci.selectedModifiers && ci.selectedModifiers.length > 0 ? `${ci.selectedVariant ? ' | ' : ''}${ci.selectedModifiers.map(m => m.optionName).join(', ')}` : ''}`,
         })),
         subtotal,
         discountName: undefined,
@@ -809,47 +866,50 @@ export default function HomeScreen() {
               {/* Product Catalog */}
               <YStack f={1} p={14} gap={10}>
                 
-                {/* Search Bar */}
-                <XStack gap={8} ai="center">
-                  <XStack
-                    f={1}
-                    backgroundColor="white"
-                    br={10}
-                    borderWidth={1}
-                    borderColor="#E4E4E7"
-                    px={12}
-                    height={40}
-                    ai="center"
-                  >
-                    <Ionicons name="search" size={16} color="#A1A1AA" style={{ marginRight: 8 }} />
-                    <Input
+                {/* Search Bar (Only shown if products exist) */}
+                {menuItems.length > 0 && (
+                  <XStack gap={8} ai="center">
+                    <XStack
                       f={1}
-                      borderWidth={0}
-                      backgroundColor="transparent"
-                      placeholder="Cari makanan / minuman..."
-                      value={searchQuery}
-                      onChangeText={setSearchQuery}
-                      fontFamily="Geist_400Regular"
-                      fontSize={13}
-                      padding={0}
-                      height={38}
-                    />
-                    {searchQuery.length > 0 && (
-                      <TouchableOpacity onPress={() => setSearchQuery('')}>
-                        <Ionicons name="close-circle" size={16} color="#A1A1AA" />
-                      </TouchableOpacity>
-                    )}
+                      backgroundColor="white"
+                      br={10}
+                      borderWidth={1}
+                      borderColor="#E4E4E7"
+                      px={12}
+                      height={40}
+                      ai="center"
+                    >
+                      <Ionicons name="search" size={16} color="#A1A1AA" style={{ marginRight: 8 }} />
+                      <Input
+                        f={1}
+                        borderWidth={0}
+                        backgroundColor="transparent"
+                        placeholder="Cari makanan / minuman..."
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        fontFamily="Geist_400Regular"
+                        fontSize={13}
+                        padding={0}
+                        height={38}
+                      />
+                      {searchQuery.length > 0 && (
+                        <TouchableOpacity onPress={() => setSearchQuery('')}>
+                          <Ionicons name="close-circle" size={16} color="#A1A1AA" />
+                        </TouchableOpacity>
+                      )}
+                    </XStack>
                   </XStack>
-                </XStack>
+                )}
 
-                {/* Horizontal Category Chips Bar */}
-                <View style={{ height: 38, marginVertical: 2 }}>
+                {/* Horizontal Category Chips Bar (Only shown if categories exist) */}
+                {dynamicCategories.length > 1 && (
+                  <View style={{ height: 38, marginVertical: 2 }}>
                   <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={{ alignItems: 'center', gap: 6, paddingRight: 10 }}
                   >
-                    {CATEGORIES.map(cat => {
+                    {dynamicCategories.map(cat => {
                       const isSelected = selectedCategory === cat;
                       return (
                         <TouchableOpacity
@@ -878,15 +938,16 @@ export default function HomeScreen() {
                     })}
                   </ScrollView>
                 </View>
+                )}
 
                 {/* Product Grid */}
                 <ScrollView
                   f={1}
                   showsVerticalScrollIndicator={false}
-                  contentContainerStyle={{ paddingBottom: 140 }}
+                  contentContainerStyle={{ paddingBottom: 140, flexGrow: 1, justifyContent: filteredMenu.length === 0 ? 'center' : 'flex-start' }}
                 >
                   {filteredMenu.length === 0 ? (
-                    <YStack f={1} ai="center" jc="center" py={60} px={24} gap={16}>
+                    <YStack f={1} ai="center" jc="center" py={40} px={24} gap={16}>
                       <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: '#FFF3E0', justifyContent: 'center', alignItems: 'center' }}>
                         <Ionicons name="restaurant-outline" size={40} color="#FF5722" />
                       </View>
@@ -894,7 +955,7 @@ export default function HomeScreen() {
                         <Text fontFamily="Geist_800ExtraBold" fontSize={18} color="#18181B" ta="center">
                           Belum Ada Menu Resto
                         </Text>
-                        <Text fontFamily="Geist_500Medium" fontSize={13} color="#71717A" ta="center" maxWidth={300}>
+                        <Text fontFamily="Geist_500Medium" fontSize={13} color="#71717A" ta="center" maxWidth={320}>
                           Mulai tambahkan menu makanan, minuman, atau produk jualan resto Anda untuk mulai menerima transaksi kasir.
                         </Text>
                       </YStack>
@@ -902,13 +963,13 @@ export default function HomeScreen() {
                         backgroundColor="#FF5722"
                         pressStyle={{ backgroundColor: '#E64A19' }}
                         br={12}
-                        px={20}
+                        px={24}
                         h={46}
-                        onPress={() => router.push('/products')}
+                        onPress={() => router.push('/add-product')}
                         icon={<Ionicons name="add-circle-outline" size={20} color="white" />}
                       >
                         <Text fontFamily="Geist_700Bold" fontSize={14} color="white">
-                          + Tambah Menu Pertama
+                          Tambah Menu Pertama
                         </Text>
                       </Button>
                     </YStack>
@@ -933,14 +994,19 @@ export default function HomeScreen() {
                           >
                             {/* Image Container with Stock & In-Cart Badge Overlay */}
                             <View style={{ width: '100%', height: isMobile ? 110 : 130, borderRadius: 10, overflow: 'hidden', backgroundColor: '#F4F4F5', position: 'relative' }}>
-                              {item.imageSource ? (
+                              {item.imageUri ? (
+                                <Image
+                                  source={{ uri: item.imageUri }}
+                                  style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
+                                />
+                              ) : item.imageSource ? (
                                 <Image
                                   source={item.imageSource}
                                   style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
                                 />
                               ) : (
-                                <YStack f={1} jc="center" ai="center" backgroundColor={`${item.iconColor}15`}>
-                                  <Ionicons name={item.iconName as any} size={28} color={item.iconColor} />
+                                <YStack f={1} jc="center" ai="center" backgroundColor={item.iconColor}>
+                                  <Ionicons name={(item.iconName || 'restaurant-outline') as any} size={32} color="white" />
                                 </YStack>
                               )}
 
@@ -1192,31 +1258,41 @@ export default function HomeScreen() {
                       </YStack>
                     ) : (
                       <YStack gap={8}>
-                        {cart.map(item => (
-                          <XStack key={item.menuItem.id} backgroundColor="#FAFAFA" p={10} br={12} borderWidth={1} borderColor="#F4F4F5" jc="space-between" ai="center">
-                            <YStack f={1} mr={8}>
-                              <Text fontFamily="Geist_700Bold" fontSize={13} color="#18181B" numberOfLines={1}>{item.menuItem.name}</Text>
-                              <Text fontFamily="Geist_600SemiBold" fontSize={12} color="#FF5722">Rp {(item.menuItem.price * item.quantity).toLocaleString('id-ID')}</Text>
-                            </YStack>
-                            <XStack ai="center" gap={6} backgroundColor="white" p={3} br={8} borderWidth={1} borderColor="#E4E4E7">
-                              <TouchableOpacity onPress={() => updateQuantity(item.menuItem.id, -1)}>
-                                <View style={{ width: 22, height: 22, borderRadius: 5, backgroundColor: '#F4F4F5', justifyContent: 'center', alignItems: 'center' }}>
-                                  <Ionicons name="remove" size={14} color="#3F3F46" />
-                                </View>
-                              </TouchableOpacity>
-                              <TouchableOpacity onPress={() => openQtyModal(item)} activeOpacity={0.7}>
-                                <View style={{ backgroundColor: '#FFF3E0', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#FF5722' }}>
-                                  <Text fontFamily="Geist_800ExtraBold" fontSize={13} color="#FF5722">{item.quantity}</Text>
-                                </View>
-                              </TouchableOpacity>
-                              <TouchableOpacity onPress={() => updateQuantity(item.menuItem.id, 1)}>
-                                <View style={{ width: 22, height: 22, borderRadius: 5, backgroundColor: '#FF5722', justifyContent: 'center', alignItems: 'center' }}>
-                                  <Ionicons name="add" size={14} color="white" />
-                                </View>
-                              </TouchableOpacity>
+                        {cart.map(item => {
+                          const itemKey = item.id || item.menuItem.id;
+                          const effectiveUnitPrice = item.unitPrice ?? item.menuItem.price;
+                          return (
+                            <XStack key={itemKey} backgroundColor="#FAFAFA" p={10} br={12} borderWidth={1} borderColor="#F4F4F5" jc="space-between" ai="center">
+                              <YStack f={1} mr={8}>
+                                <Text fontFamily="Geist_700Bold" fontSize={13} color="#18181B" numberOfLines={1}>{item.menuItem.name}</Text>
+                                {item.selectedVariant && (
+                                  <Text fontFamily="Geist_500Medium" fontSize={11} color="#3F3F46">• Varian: {item.selectedVariant.name}</Text>
+                                )}
+                                {item.selectedModifiers && item.selectedModifiers.length > 0 && (
+                                  <Text fontFamily="Geist_400Regular" fontSize={11} color="#71717A">• {item.selectedModifiers.map(m => m.optionName).join(', ')}</Text>
+                                )}
+                                <Text fontFamily="Geist_600SemiBold" fontSize={12} color="#FF5722">Rp {(effectiveUnitPrice * item.quantity).toLocaleString('id-ID')}</Text>
+                              </YStack>
+                              <XStack ai="center" gap={6} backgroundColor="white" p={3} br={8} borderWidth={1} borderColor="#E4E4E7">
+                                <TouchableOpacity onPress={() => updateQuantity(itemKey, -1)}>
+                                  <View style={{ width: 22, height: 22, borderRadius: 5, backgroundColor: '#F4F4F5', justifyContent: 'center', alignItems: 'center' }}>
+                                    <Ionicons name="remove" size={14} color="#3F3F46" />
+                                  </View>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => openQtyModal(item)} activeOpacity={0.7}>
+                                  <View style={{ backgroundColor: '#FFF3E0', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#FF5722' }}>
+                                    <Text fontFamily="Geist_800ExtraBold" fontSize={13} color="#FF5722">{item.quantity}</Text>
+                                  </View>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => updateQuantity(itemKey, 1)}>
+                                  <View style={{ width: 22, height: 22, borderRadius: 5, backgroundColor: '#FF5722', justifyContent: 'center', alignItems: 'center' }}>
+                                    <Ionicons name="add" size={14} color="white" />
+                                  </View>
+                                </TouchableOpacity>
+                              </XStack>
                             </XStack>
-                          </XStack>
-                        ))}
+                          );
+                        })}
                       </YStack>
                     )}
                   </ScrollView>
@@ -1295,31 +1371,41 @@ export default function HomeScreen() {
                   </YStack>
                 ) : (
                   <YStack gap={10}>
-                    {cart.map(item => (
-                      <XStack key={item.menuItem.id} backgroundColor="#FAFAFA" p={12} br={14} borderWidth={1} borderColor="#F4F4F5" jc="space-between" ai="center">
-                        <YStack f={1} mr={10}>
-                          <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">{item.menuItem.name}</Text>
-                          <Text fontFamily="Geist_600SemiBold" fontSize={13} color="#FF5722">Rp {(item.menuItem.price * item.quantity).toLocaleString('id-ID')}</Text>
-                        </YStack>
-                        <XStack ai="center" gap={8} backgroundColor="white" p={4} br={10} borderWidth={1} borderColor="#E4E4E7">
-                          <TouchableOpacity onPress={() => updateQuantity(item.menuItem.id, -1)}>
-                            <View style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: '#F4F4F5', justifyContent: 'center', alignItems: 'center' }}>
-                              <Ionicons name="remove" size={16} color="#3F3F46" />
-                            </View>
-                          </TouchableOpacity>
-                          <TouchableOpacity onPress={() => openQtyModal(item)} activeOpacity={0.7}>
-                            <View style={{ backgroundColor: '#FFF3E0', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1.5, borderColor: '#FF5722' }}>
-                              <Text fontFamily="Geist_800ExtraBold" fontSize={14} color="#FF5722">{item.quantity}</Text>
-                            </View>
-                          </TouchableOpacity>
-                          <TouchableOpacity onPress={() => updateQuantity(item.menuItem.id, 1)}>
-                            <View style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: '#FF5722', justifyContent: 'center', alignItems: 'center' }}>
-                              <Ionicons name="add" size={16} color="white" />
-                            </View>
-                          </TouchableOpacity>
+                    {cart.map(item => {
+                      const itemKey = item.id || item.menuItem.id;
+                      const effectiveUnitPrice = item.unitPrice ?? item.menuItem.price;
+                      return (
+                        <XStack key={itemKey} backgroundColor="#FAFAFA" p={12} br={14} borderWidth={1} borderColor="#F4F4F5" jc="space-between" ai="center">
+                          <YStack f={1} mr={10}>
+                            <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">{item.menuItem.name}</Text>
+                            {item.selectedVariant && (
+                              <Text fontFamily="Geist_500Medium" fontSize={11} color="#3F3F46">• Varian: {item.selectedVariant.name}</Text>
+                            )}
+                            {item.selectedModifiers && item.selectedModifiers.length > 0 && (
+                              <Text fontFamily="Geist_400Regular" fontSize={11} color="#71717A">• {item.selectedModifiers.map(m => m.optionName).join(', ')}</Text>
+                            )}
+                            <Text fontFamily="Geist_600SemiBold" fontSize={13} color="#FF5722">Rp {(effectiveUnitPrice * item.quantity).toLocaleString('id-ID')}</Text>
+                          </YStack>
+                          <XStack ai="center" gap={8} backgroundColor="white" p={4} br={10} borderWidth={1} borderColor="#E4E4E7">
+                            <TouchableOpacity onPress={() => updateQuantity(itemKey, -1)}>
+                              <View style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: '#F4F4F5', justifyContent: 'center', alignItems: 'center' }}>
+                                <Ionicons name="remove" size={16} color="#3F3F46" />
+                              </View>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => openQtyModal(item)} activeOpacity={0.7}>
+                              <View style={{ backgroundColor: '#FFF3E0', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1.5, borderColor: '#FF5722' }}>
+                                <Text fontFamily="Geist_800ExtraBold" fontSize={14} color="#FF5722">{item.quantity}</Text>
+                              </View>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => updateQuantity(itemKey, 1)}>
+                              <View style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: '#FF5722', justifyContent: 'center', alignItems: 'center' }}>
+                                <Ionicons name="add" size={16} color="white" />
+                              </View>
+                            </TouchableOpacity>
+                          </XStack>
                         </XStack>
-                      </XStack>
-                    ))}
+                      );
+                    })}
                   </YStack>
                 )}
               </ScrollView>
@@ -2734,6 +2820,234 @@ export default function HomeScreen() {
             </Animated.View>
           </View>
         )}
+
+      {/* ── MODAL PILIH VARIAN & MODIFIER / OPSI TAMBAHAN ── */}
+      <Modal visible={variantModalVisible} animationType="slide" transparent>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '85%' }}>
+            <XStack jc="space-between" ai="center" pb={12} borderBottomWidth={1} borderColor="#E4E4E7">
+              <YStack gap={2}>
+                <Text fontFamily="Geist_700Bold" fontSize={16} color="#18181B">
+                  {selectedVariantItem?.name}
+                </Text>
+                <Text fontFamily="Geist_500Medium" fontSize={12} color="#71717A">
+                  Pilih varian & opsi tambahan
+                </Text>
+              </YStack>
+              <TouchableOpacity onPress={() => setVariantModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#71717A" />
+              </TouchableOpacity>
+            </XStack>
+
+            <ScrollView style={{ marginVertical: 12 }} showsVerticalScrollIndicator={false}>
+              <YStack gap={16}>
+                {/* Pilihan Varian Utama */}
+                {selectedVariantItem?.hasVariants && selectedVariantItem?.variants && selectedVariantItem.variants.length > 0 && (
+                  <YStack gap={8}>
+                    <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
+                      Pilih Varian Utama (Wajib):
+                    </Text>
+                    <YStack gap={8}>
+                      {selectedVariantItem.variants.map((v) => {
+                        const isSelected = selectedVariant?.id === v.id;
+                        return (
+                          <TouchableOpacity
+                            key={v.id}
+                            onPress={() => setSelectedVariant(v)}
+                            style={{
+                              flexDirection: 'row',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              padding: 12,
+                              borderRadius: 10,
+                              backgroundColor: isSelected ? '#FFF3E0' : '#F9FAFB',
+                              borderWidth: 1.5,
+                              borderColor: isSelected ? '#FF5722' : '#E4E4E7',
+                            }}
+                          >
+                            <Text fontFamily="Geist_700Bold" fontSize={13} color={isSelected ? '#FF5722' : '#18181B'}>
+                              {v.name}
+                            </Text>
+                            <Text fontFamily="Geist_700Bold" fontSize={13} color={isSelected ? '#FF5722' : '#10B981'}>
+                              Rp {v.sellingPrice.toLocaleString('id-ID')}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </YStack>
+                  </YStack>
+                )}
+
+                {/* Pilihan Grup Modifier / Opsi Tambahan */}
+                {selectedVariantItem?.modifierGroups && selectedVariantItem.modifierGroups.map((group) => (
+                  <YStack key={group.id} gap={8}>
+                    <XStack ai="center" gap={6}>
+                      <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
+                        {group.name}
+                      </Text>
+                      {group.isRequired && (
+                        <Text fontFamily="Geist_600SemiBold" fontSize={11} color="#EF4444" style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                          Wajib Pilih 1
+                        </Text>
+                      )}
+                    </XStack>
+
+                    <YStack gap={6}>
+                      {group.options.map((opt) => {
+                        const currentSelectedList = selectedModifiersState[group.id] || [];
+                        const isSelected = currentSelectedList.some(o => o.optionId === opt.id);
+
+                        return (
+                          <TouchableOpacity
+                            key={opt.id}
+                            onPress={() => {
+                              if (group.isRequired) {
+                                // Single Select (Radio Button)
+                                setSelectedModifiersState(prev => ({
+                                  ...prev,
+                                  [group.id]: [{
+                                    groupId: group.id,
+                                    groupName: group.name,
+                                    optionId: opt.id,
+                                    optionName: opt.name,
+                                    price: opt.price,
+                                  }],
+                                }));
+                              } else {
+                                // Multi Select (Checkbox)
+                                setSelectedModifiersState(prev => {
+                                  const list = prev[group.id] || [];
+                                  const exists = list.some(o => o.optionId === opt.id);
+                                  if (exists) {
+                                    return { ...prev, [group.id]: list.filter(o => o.optionId !== opt.id) };
+                                  } else {
+                                    return {
+                                      ...prev,
+                                      [group.id]: [...list, {
+                                        groupId: group.id,
+                                        groupName: group.name,
+                                        optionId: opt.id,
+                                        optionName: opt.name,
+                                        price: opt.price,
+                                      }],
+                                    };
+                                  }
+                                });
+                              }
+                            }}
+                            style={{
+                              flexDirection: 'row',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              padding: 10,
+                              paddingHorizontal: 12,
+                              borderRadius: 8,
+                              backgroundColor: isSelected ? '#F0FDF4' : '#F9FAFB',
+                              borderWidth: 1,
+                              borderColor: isSelected ? '#10B981' : '#E4E4E7',
+                            }}
+                          >
+                            <XStack ai="center" gap={8}>
+                              <Ionicons
+                                name={group.isRequired ? (isSelected ? 'radio-button-on' : 'radio-button-off') : (isSelected ? 'checkbox' : 'square-outline')}
+                                size={18}
+                                color={isSelected ? '#10B981' : '#9CA3AF'}
+                              />
+                              <Text fontFamily="Geist_500Medium" fontSize={13} color="#18181B">
+                                {opt.name}
+                              </Text>
+                            </XStack>
+                            <Text fontFamily="Geist_600SemiBold" fontSize={12} color="#10B981">
+                              {opt.price > 0 ? `+Rp ${opt.price.toLocaleString('id-ID')}` : 'Gratis'}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </YStack>
+                  </YStack>
+                ))}
+              </YStack>
+            </ScrollView>
+
+            {/* Total Price & Add to Cart Button */}
+            {(() => {
+              const basePrice = selectedVariantItem?.hasVariants && selectedVariant
+                ? selectedVariant.sellingPrice
+                : (selectedVariantItem?.price || 0);
+
+              const modifiersTotal = Object.values(selectedModifiersState)
+                .flat()
+                .reduce((sum, m) => sum + m.price, 0);
+
+              const totalUnitPrice = basePrice + modifiersTotal;
+
+              return (
+                <YStack gap={8} pt={10} borderTopWidth={1} borderColor="#E4E4E7">
+                  <XStack jc="space-between" ai="center">
+                    <Text fontFamily="Geist_500Medium" fontSize={13} color="#71717A">
+                      Harga Satuan:
+                    </Text>
+                    <Text fontFamily="Geist_800ExtraBold" fontSize={16} color="#FF5722">
+                      Rp {totalUnitPrice.toLocaleString('id-ID')}
+                    </Text>
+                  </XStack>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (selectedVariantItem?.modifierGroups) {
+                        for (const g of selectedVariantItem.modifierGroups) {
+                          if (g.isRequired) {
+                            const sel = selectedModifiersState[g.id] || [];
+                            if (sel.length === 0) {
+                              triggerGlobalAlert('Perhatian ⚠️', `Harap pilih salah satu opsi untuk "${g.name}".`);
+                              return;
+                            }
+                          }
+                        }
+                      }
+
+                      const allSelModifiers = Object.values(selectedModifiersState).flat();
+                      const cartItemId = selectedVariantItem!.id + '_' + (selectedVariant?.id || 'base') + '_' + allSelModifiers.map(m => m.optionId).sort().join('_');
+
+                      setCart(prevCart => {
+                        const existingIdx = prevCart.findIndex(ci => (ci.id || ci.menuItem.id) === cartItemId);
+                        if (existingIdx > -1) {
+                          const updated = [...prevCart];
+                          updated[existingIdx].quantity += 1;
+                          return updated;
+                        }
+                        return [
+                          ...prevCart,
+                          {
+                            id: cartItemId,
+                            menuItem: selectedVariantItem!,
+                            selectedVariant: selectedVariant || undefined,
+                            selectedModifiers: allSelModifiers,
+                            unitPrice: totalUnitPrice,
+                            quantity: 1,
+                          },
+                        ];
+                      });
+
+                      setVariantModalVisible(false);
+                    }}
+                    style={{
+                      backgroundColor: '#FF5722',
+                      paddingVertical: 12,
+                      borderRadius: 12,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text fontFamily="Geist_700Bold" fontSize={14} color="white">
+                      + Tambah ke Keranjang (Rp {totalUnitPrice.toLocaleString('id-ID')})
+                    </Text>
+                  </TouchableOpacity>
+                </YStack>
+              );
+            })()}
+          </View>
+        </View>
+      </Modal>
 
       </YStack>
     </View>

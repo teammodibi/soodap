@@ -125,12 +125,18 @@ export default function ProductsScreen() {
     showAlert('Sukses! 🎉', `Penyesuaian stok "${stockProduct.name}" telah dicatat dalam history.`);
   }
 
+  function formatNumberWithDots(val: string): string {
+    const digitsOnly = val.replace(/\D/g, '');
+    if (!digitsOnly) return '';
+    return parseInt(digitsOnly, 10).toLocaleString('id-ID');
+  }
+
   function openEditProduct(prod: ProductItem) {
     setEditingProduct(prod);
     setEditName(prod.name);
     setEditCategory(prod.category);
-    setEditSellingPrice(prod.sellingPrice.toString());
-    setEditCostPrice(prod.costPrice.toString());
+    setEditSellingPrice(prod.sellingPrice > 0 ? prod.sellingPrice.toLocaleString('id-ID') : '');
+    setEditCostPrice(prod.costPrice > 0 ? prod.costPrice.toLocaleString('id-ID') : '');
     setEditTrackStock(prod.trackStock ?? false);
     setEditStock(prod.stock.toString());
     setEditDescription(prod.description || '');
@@ -145,8 +151,8 @@ export default function ProductsScreen() {
       return;
     }
 
-    const sellNum = parseInt(editSellingPrice) || 0;
-    const costNum = parseInt(editCostPrice) || 0;
+    const sellNum = parseInt(editSellingPrice.replace(/\D/g, '')) || 0;
+    const costNum = parseInt(editCostPrice.replace(/\D/g, '')) || 0;
     const finalStock = editTrackStock ? Math.max(0, parseInt(editStock) || 0) : 999;
 
     productStore.updateProduct(editingProduct.id, {
@@ -318,109 +324,136 @@ export default function ProductsScreen() {
 
             {/* ── TAB 1: DAFTAR MENU ── */}
             {activeTab === 'products' && (
-              <YStack gap={14}>
-                {/* Add Product Button Above List */}
-                <TouchableOpacity
-                  onPress={() => router.push('/add-product')}
-                  activeOpacity={0.8}
-                  style={{
-                    backgroundColor: '#FF5722',
-                    height: 44,
-                    borderRadius: 12,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 6,
-                  }}
+              products.length === 0 ? (
+                /* EMPTY STATE: Hide search & filters, center + Tambah Menu Baru button */
+                <YStack
+                  backgroundColor="white"
+                  p={36}
+                  br={16}
+                  ai="center"
+                  jc="center"
+                  gap={14}
+                  borderWidth={1}
+                  borderColor="#E4E4E7"
+                  my={10}
                 >
-                  <Ionicons name="add" size={20} color="white" />
-                  <Text fontFamily="Geist_800ExtraBold" fontSize={14} color="white">
-                    Tambah Menu Baru
-                  </Text>
-                </TouchableOpacity>
+                  <View
+                    style={{
+                      width: 72,
+                      height: 72,
+                      borderRadius: 36,
+                      backgroundColor: '#FFF3E0',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Ionicons name="fast-food-outline" size={36} color="#FF5722" />
+                  </View>
 
-                {/* Search & Category Filter */}
-                <YStack gap={10}>
-                  <XStack backgroundColor="white" br={10} px={10} ai="center" height={40} borderWidth={1} borderColor="#E4E4E7">
-                    <Ionicons name="search" size={16} color="#A1A1AA" />
-                    <Input
-                      f={1}
-                      borderWidth={0}
-                      backgroundColor="transparent"
-                      placeholder="Cari nama menu..."
-                      value={searchQuery}
-                      onChangeText={setSearchQuery}
-                      fontFamily="Geist_400Regular"
-                      fontSize={13}
-                    />
-                  </XStack>
+                  <YStack ai="center" gap={4} maxWidth={320}>
+                    <Text fontFamily="Geist_800ExtraBold" fontSize={17} color="#18181B" ta="center">
+                      Belum Ada Menu Resto
+                    </Text>
+                    <Text fontFamily="Geist_400Regular" fontSize={13} color="#71717A" ta="center" lh={18}>
+                      Mulai tambahkan menu makanan, minuman, atau produk jualan resto Anda untuk mulai transaksi kasir.
+                    </Text>
+                  </YStack>
 
-                  {/* ATURAN: Jika <= 6 gunakan CHIPS. Jika > 6 gunakan SELECT DROPDOWN */}
-                  {categories.length <= 6 ? (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                      <XStack gap={6}>
-                        {['Semua', ...categories].map(cat => {
-                          const isSelected = selectedCategory === cat;
-                          return (
-                            <TouchableOpacity
-                              key={cat}
-                              onPress={() => setSelectedCategory(cat)}
-                              style={{
-                                paddingHorizontal: 14,
-                                paddingVertical: 6,
-                                borderRadius: 8,
-                                backgroundColor: isSelected ? '#FF5722' : 'white',
-                                borderWidth: 1,
-                                borderColor: isSelected ? '#FF5722' : '#E4E4E7',
-                              }}
-                            >
-                              <Text fontFamily="Geist_700Bold" fontSize={12} color={isSelected ? 'white' : '#52525B'}>
-                                {cat}
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </XStack>
-                    </ScrollView>
-                  ) : (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                      <XStack gap={6}>
-                        {['Semua', ...categories].map(cat => {
-                          const isSelected = selectedCategory === cat;
-                          return (
-                            <TouchableOpacity
-                              key={cat}
-                              onPress={() => setSelectedCategory(cat)}
-                              style={{
-                                paddingHorizontal: 14,
-                                paddingVertical: 6,
-                                borderRadius: 8,
-                                backgroundColor: isSelected ? '#FF5722' : 'white',
-                                borderWidth: 1,
-                                borderColor: isSelected ? '#FF5722' : '#E4E4E7',
-                              }}
-                            >
-                              <Text fontFamily="Geist_700Bold" fontSize={12} color={isSelected ? 'white' : '#52525B'}>
-                                {cat}
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </XStack>
-                    </ScrollView>
-                  )}
+                  <Button
+                    backgroundColor="#FF5722"
+                    pressStyle={{ backgroundColor: '#E64A19' }}
+                    br={12}
+                    px={22}
+                    h={46}
+                    onPress={() => router.push('/add-product')}
+                    icon={<Ionicons name="add-circle-outline" size={20} color="white" />}
+                    mt={4}
+                  >
+                    <Text fontFamily="Geist_700Bold" fontSize={14} color="white">
+                      + Tambah Menu Baru
+                    </Text>
+                  </Button>
                 </YStack>
+              ) : (
+                /* POPULATED STATE: Show + Tambah Menu button, search bar, category chips, and product cards */
+                <YStack gap={14}>
+                  {/* Add Product Button Above List */}
+                  <TouchableOpacity
+                    onPress={() => router.push('/add-product')}
+                    activeOpacity={0.8}
+                    style={{
+                      backgroundColor: '#FF5722',
+                      height: 44,
+                      borderRadius: 12,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <Ionicons name="add" size={20} color="white" />
+                    <Text fontFamily="Geist_800ExtraBold" fontSize={14} color="white">
+                      Tambah Menu Baru
+                    </Text>
+                  </TouchableOpacity>
 
-                {/* Products Cards List */}
-                <YStack gap={10}>
-                  {filteredProducts.length === 0 ? (
-                    <YStack backgroundColor="white" p={32} br={14} ai="center" gap={8} borderWidth={1} borderColor="#E4E4E7">
-                      <Ionicons name="fast-food-outline" size={40} color="#D4D4D8" />
-                      <Text fontFamily="Geist_600SemiBold" fontSize={13} color="#A1A1AA">
-                        Tidak ada menu yang ditemukan.
-                      </Text>
-                    </YStack>
-                  ) : (
+                  {/* Search & Category Filter */}
+                  <YStack gap={10}>
+                    <XStack backgroundColor="white" br={10} px={10} ai="center" height={40} borderWidth={1} borderColor="#E4E4E7">
+                      <Ionicons name="search" size={16} color="#A1A1AA" />
+                      <Input
+                        f={1}
+                        borderWidth={0}
+                        backgroundColor="transparent"
+                        placeholder="Cari nama menu..."
+                        placeholderTextColor="$gray10"
+                        color="$gray12"
+                        style={{ color: '#18181B' }}
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        fontFamily="Geist_400Regular"
+                        fontSize={13}
+                      />
+                    </XStack>
+
+                    {/* Category Filter Chips */}
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      <XStack gap={6}>
+                        {['Semua', ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))].map(cat => {
+                          const isSelected = selectedCategory === cat;
+                          return (
+                            <TouchableOpacity
+                              key={cat}
+                              onPress={() => setSelectedCategory(cat)}
+                              style={{
+                                paddingHorizontal: 14,
+                                paddingVertical: 6,
+                                borderRadius: 8,
+                                backgroundColor: isSelected ? '#FF5722' : 'white',
+                                borderWidth: 1,
+                                borderColor: isSelected ? '#FF5722' : '#E4E4E7',
+                              }}
+                            >
+                              <Text fontFamily="Geist_700Bold" fontSize={12} color={isSelected ? 'white' : '#52525B'}>
+                                {cat}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </XStack>
+                    </ScrollView>
+                  </YStack>
+
+                  {/* Products Cards List */}
+                  <YStack gap={10}>
+                    {filteredProducts.length === 0 ? (
+                      <YStack backgroundColor="white" p={24} br={14} ai="center" gap={8} borderWidth={1} borderColor="#E4E4E7">
+                        <Ionicons name="search-outline" size={32} color="#D4D4D8" />
+                        <Text fontFamily="Geist_600SemiBold" fontSize={13} color="#A1A1AA">
+                          Tidak ada menu yang sesuai dengan pencarian "{searchQuery}".
+                        </Text>
+                      </YStack>
+                    ) : (
                     filteredProducts.map(prod => {
                       const margin = prod.sellingPrice > 0 ? Math.round(((prod.sellingPrice - prod.costPrice) / prod.sellingPrice) * 100) : 0;
                       
@@ -532,7 +565,8 @@ export default function ProductsScreen() {
                   )}
                 </YStack>
               </YStack>
-            )}
+            )
+          )}
 
             {/* ── TAB 2: KELOLA KATEGORI ── */}
             {activeTab === 'categories' && (
@@ -814,9 +848,13 @@ export default function ProductsScreen() {
                       borderWidth={1.5}
                       borderColor="#FF5722"
                       br={10}
+                      placeholder="Contoh: 22.000"
+                      placeholderTextColor="$gray10"
+                      color="$gray12"
+                      style={{ color: '#18181B' }}
                       keyboardType="number-pad"
                       value={editSellingPrice}
-                      onChangeText={setEditSellingPrice}
+                      onChangeText={(txt) => setEditSellingPrice(formatNumberWithDots(txt))}
                       fontFamily="Geist_800ExtraBold"
                       fontSize={15}
                       height={44}
@@ -832,9 +870,13 @@ export default function ProductsScreen() {
                       borderWidth={1}
                       borderColor="#E4E4E7"
                       br={10}
+                      placeholder="Contoh: 8.500"
+                      placeholderTextColor="$gray10"
+                      color="$gray12"
+                      style={{ color: '#18181B' }}
                       keyboardType="number-pad"
                       value={editCostPrice}
-                      onChangeText={setEditCostPrice}
+                      onChangeText={(txt) => setEditCostPrice(formatNumberWithDots(txt))}
                       fontFamily="Geist_700Bold"
                       fontSize={15}
                       height={44}
@@ -844,8 +886,8 @@ export default function ProductsScreen() {
 
                 {/* Financial Summary Card (Advanced View) */}
                 {(() => {
-                  const s = parseInt(editSellingPrice) || 0;
-                  const c = parseInt(editCostPrice) || 0;
+                  const s = parseInt(editSellingPrice.replace(/\D/g, '')) || 0;
+                  const c = parseInt(editCostPrice.replace(/\D/g, '')) || 0;
                   const p = s - c;
                   const m = s > 0 ? Math.round((p / s) * 100) : 0;
                   return (

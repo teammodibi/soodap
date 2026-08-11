@@ -1,4 +1,14 @@
-export type Category = 'Semua' | 'Coffee' | 'Non-Coffee' | 'Makanan' | 'Snack' | 'Dessert';
+import { ProductVariant, ModifierGroup } from './productStore';
+
+export type Category = string;
+
+export interface SelectedModifier {
+  groupId: string;
+  groupName: string;
+  optionId: string;
+  optionName: string;
+  price: number;
+}
 
 export interface MenuItem {
   id: string;
@@ -9,10 +19,17 @@ export interface MenuItem {
   iconName: string;
   iconColor: string;
   imageSource?: any;
+  hasVariants?: boolean;
+  variants?: ProductVariant[];
+  modifierGroups?: ModifierGroup[];
 }
 
 export interface CartItem {
+  id?: string; // Unique cart item ID (menuItemId + variantId + modifierIds)
   menuItem: MenuItem;
+  selectedVariant?: ProductVariant;
+  selectedModifiers?: SelectedModifier[];
+  unitPrice?: number; // Price per unit including variant & selected modifiers
   quantity: number;
   note?: string;
 }

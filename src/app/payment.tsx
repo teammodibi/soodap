@@ -91,10 +91,13 @@ export default function PaymentScreen() {
   }
 
   // Calculations
+  const discountAmount = orderState.discountAmount || 0;
+  const discountName = orderState.discountName;
   const totalItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotal = cart.reduce((sum, item) => sum + item.menuItem.price * item.quantity, 0);
-  const taxAndService = Math.round(subtotal * 0.1); // 10% tax
-  const grandTotal = subtotal + taxAndService;
+  const subtotal = cart.reduce((sum, item) => sum + (item.unitPrice ?? item.menuItem.price) * item.quantity, 0);
+  const taxableSubtotal = Math.max(0, subtotal - discountAmount);
+  const taxAndService = Math.round(taxableSubtotal * 0.1); // 10% tax
+  const grandTotal = taxableSubtotal + taxAndService;
 
   const cashNum = parseInt(cashAmount) || 0;
   const isCashShort = paymentMethod === 'Tunai' && cashNum < grandTotal;

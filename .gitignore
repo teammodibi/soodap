@@ -44,4 +44,6 @@ example
 /android
 .tamagui/
 .claude/
+graphify-out/
+supabase/.temp/
 

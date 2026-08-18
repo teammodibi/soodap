@@ -47,6 +47,8 @@ export interface OrderState {
   customer: Customer;
   selectedOutlet: string;
   customersList: Customer[];
+  discountName?: string;
+  discountAmount?: number;
 }
 
 export const INITIAL_CUSTOMERS: Customer[] = [

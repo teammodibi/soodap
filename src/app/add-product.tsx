@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { YStack, XStack, Text, Button, Input, TextArea, ScrollView } from 'tamagui';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
   TouchableOpacity,
   View,
@@ -13,14 +13,19 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { productStore, ProductVariant, ModifierOption, ModifierGroup } from '../lib/productStore';
+import { outletStore, OutletItem } from '../lib/outletStore';
+import { getActiveSession } from '../lib/session';
 
 export default function AddProductScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ editId?: string }>();
+  const isEditMode = Boolean(params.editId);
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
@@ -29,6 +34,7 @@ export default function AddProductScreen() {
   // Store state
   const [storeState, setStoreState] = useState(productStore.get());
   const { categories } = storeState;
+  const allCategories = Array.from(new Set(['Umum', ...categories]));
 
   useEffect(() => {
     const unsubscribe = productStore.subscribe(() => {
@@ -61,6 +67,175 @@ export default function AddProductScreen() {
   const [optNameInput, setOptNameInput] = useState('');
   const [optPriceInput, setOptPriceInput] = useState('');
   const [activeGroupIndex, setActiveGroupIndex] = useState<number | null>(null);
+
+  // Outlet Availability State (Single Selection)
+  const session = getActiveSession();
+  const defaultOutletName = session?.storeName || 'Ayam Kelawas';
+  const [allOutlets, setAllOutlets] = useState<OutletItem[]>(() => outletStore.get());
+  const [isAvailableAllOutlets, setIsAvailableAllOutlets] = useState(true);
+  const [selectedAvailableOutlet, setSelectedAvailableOutlet] = useState<string>(defaultOutletName);
+
+  useEffect(() => {
+    const unsub = outletStore.subscribe(() => {
+      setAllOutlets(outletStore.get());
+    });
+    return unsub;
+  }, []);
+
+  // Prepopulate form when editing existing product
+  useEffect(() => {
+    if (params.editId) {
+      const prod = productStore.get().products.find(p => p.id === params.editId);
+      if (prod) {
+        setName(prod.name);
+        setCategory(prod.category);
+        setSellingPrice(prod.sellingPrice > 0 ? prod.sellingPrice.toLocaleString('id-ID') : '');
+        setCostPrice(prod.costPrice > 0 ? prod.costPrice.toLocaleString('id-ID') : '');
+        setTrackStock(prod.trackStock ?? false);
+        setStock(prod.stock !== undefined ? prod.stock.toString() : '0');
+        setDescription(prod.description || '');
+        setRecipeNote(prod.recipeNote || '');
+        setShowRecipeInput(Boolean(prod.recipeNote));
+        setVisualType(prod.imageUri ? 'image' : 'icon');
+        setImageUri(prod.imageUri || null);
+        setSelectedIcon(prod.iconName || 'restaurant-outline');
+        setSelectedColor(prod.colorHex || '#FF5722');
+        const hasVar = Boolean(prod.hasVariants || (prod.variants && prod.variants.length > 0));
+        setHasVariants(hasVar);
+        setVariants(prod.variants || []);
+        setModifierGroups(prod.modifierGroups || []);
+        setShowCustomOptions(hasVar || Boolean(prod.modifierGroups && prod.modifierGroups.length > 0));
+        const isAll = !prod.availableOutlets || prod.availableOutlets.includes('all') || prod.availableOutlets.length === 0;
+        setIsAvailableAllOutlets(isAll);
+        setSelectedAvailableOutlet(
+          prod.availableOutlets && !prod.availableOutlets.includes('all') && prod.availableOutlets[0]
+            ? prod.availableOutlets[0]
+            : defaultOutletName
+        );
+      }
+    }
+  }, [params.editId]);
+
+  // AI Description Assistant State
+  const [aiModalVisible, setAiModalVisible] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+
+  const generateCulinaryDescriptions = (productName: string, productCategory: string): string[] => {
+    const lowerName = productName.toLowerCase();
+    const lowerCat = productCategory.toLowerCase();
+
+    const isBeverage =
+      lowerCat.includes('minum') ||
+      lowerCat.includes('kopi') ||
+      lowerCat.includes('tea') ||
+      lowerCat.includes('coffee') ||
+      lowerCat.includes('jus') ||
+      lowerCat.includes('boba') ||
+      lowerName.includes('es ') ||
+      lowerName.includes('kopi') ||
+      lowerName.includes('latte') ||
+      lowerName.includes('tea') ||
+      lowerName.includes('jus');
+
+    const isSnack =
+      lowerCat.includes('snack') ||
+      lowerCat.includes('camilan') ||
+      lowerCat.includes('kentang') ||
+      lowerCat.includes('roti') ||
+      lowerName.includes('kentang') ||
+      lowerName.includes('gorengan') ||
+      lowerName.includes('toast');
+
+    const isPedas =
+      lowerName.includes('pedas') ||
+      lowerName.includes('sambal') ||
+      lowerName.includes('mercon') ||
+      lowerName.includes('geprek') ||
+      lowerName.includes('balado') ||
+      lowerName.includes('rica');
+
+    const isBakar =
+      lowerName.includes('bakar') ||
+      lowerName.includes('panggang') ||
+      lowerName.includes('grill') ||
+      lowerName.includes('bbq');
+
+    const isGoreng =
+      lowerName.includes('goreng') ||
+      lowerName.includes('crispy') ||
+      lowerName.includes('kremes') ||
+      lowerName.includes('kriuk');
+
+    if (isBeverage) {
+      return [
+        `Racikan ${productName} segar dengan perpaduan rasa yang pas, disajikan dingin untuk menyegarkan harimu.`,
+        `${productName} spesial khas resto dengan aroma memikat dan kesegaran autentik di setiap tegukan.`,
+        `Sensasi kesegaran premium ${productName}, pilihan terbaik pelepas dahaga dan teman santai setiap saat.`,
+      ];
+    }
+
+    if (isSnack) {
+      return [
+        `Camilan renyah ${productName} dengan bumbu gurih meresap, teman ngemil sempurna kapan saja.`,
+        `${productName} lezat dengan tekstur renyah dan rasa gurih yang pas bikin susah berhenti ngunyah.`,
+        `Kudapan favorit ${productName} yang dibuat fresh setiap hari, cocok dinikmati bersama teman dan keluarga.`,
+      ];
+    }
+
+    if (isPedas) {
+      return [
+        `${productName} dengan sensasi pedas mantap berpadu bumbu rempah tradisional yang gurih dan bikin nagih.`,
+        `Olahan ${productName} dengan sambal pedas nampol khas resto, disajikan hangat dengan cita rasa istimewa.`,
+        `Pilihan utama pencinta pedas! ${productName} pedas gurih meresap sampai ke dalam setiap gigitan.`,
+      ];
+    }
+
+    if (isBakar) {
+      return [
+        `${productName} panggang bumbu bakar karamelisasi kecap rempah yang harum meresap sempurna.`,
+        `${productName} dengan aroma asap bakar khas dan lumuran bumbu marinasi otentik yang empuk dan lezat.`,
+        `Sajian ${productName} bakar pilihan dengan rasa manis gurih meresap dan tekstur juicy yang menggoda.`,
+      ];
+    }
+
+    if (isGoreng) {
+      return [
+        `${productName} renyah di luar dan juicy di dalam, digoreng keemasan dengan racikan bumbu rempah rahasia.`,
+        `${productName} gurih garing berpadu kremes renyah, nikmat disajikan hangat bersama hidangan utama.`,
+        `Kenikmatan ${productName} garing krispi dengan bumbu meresap sempurna sampai ke serat terdalam.`,
+      ];
+    }
+
+    return [
+      `Menu spesial ${productName} dimasak dengan bahan pilihan berkualitas dan racikan bumbu khas dapur kami.`,
+      `Sajian istimewa ${productName} dengan rasa otentik yang lezat, gurih, dan siap memanjakan lidah Anda.`,
+      `${productName} favorit pelanggan! Porsi pas dan cita rasa nikmat yang selalu dirindukan setiap saat.`,
+    ];
+  };
+
+  const handleRequestAiDescription = () => {
+    const trimmedName = name.trim();
+    const trimmedCat = category.trim();
+
+    if (!trimmedName || !trimmedCat) {
+      showAlert(
+        'Isi Nama Menu & Kategori Terlebih Dahulu',
+        'Untuk membuat saran deskripsi AI yang akurat, mohon lengkapi Nama Menu dan Kategori terlebih dahulu.',
+        'warning'
+      );
+      return;
+    }
+
+    setIsGeneratingAi(true);
+    setAiModalVisible(true);
+
+    setTimeout(() => {
+      const generated = generateCulinaryDescriptions(trimmedName, trimmedCat);
+      setAiSuggestions(generated);
+      setIsGeneratingAi(false);
+    }, 450);
+  };
 
   function handleAddVariant() {
     const trimmed = varNameInput.trim();
@@ -96,8 +271,8 @@ export default function AddProductScreen() {
 
     if (type === 'size') {
       preset = [
-        { id: Date.now() + '_reg', name: 'Regular', sellingPrice: baseP, costPrice: baseC },
-        { id: Date.now() + '_lrg', name: 'Large / Jumbo', sellingPrice: Math.round((baseP * 1.25) / 1000) * 1000, costPrice: Math.round((baseC * 1.2) / 1000) * 1000 },
+        { id: Date.now() + '_reg', name: 'Reguler', sellingPrice: baseP, costPrice: baseC },
+        { id: Date.now() + '_lrg', name: 'Jumbo / Large', sellingPrice: Math.round((baseP * 1.25) / 1000) * 1000, costPrice: Math.round((baseC * 1.2) / 1000) * 1000 },
       ];
     } else if (type === 'temp') {
       preset = [
@@ -107,11 +282,66 @@ export default function AddProductScreen() {
     } else if (type === 'portion') {
       preset = [
         { id: Date.now() + '_p1', name: 'Porsi Biasa', sellingPrice: baseP, costPrice: baseC },
-        { id: Date.now() + '_p2', name: 'Porsi Double', sellingPrice: Math.round((baseP * 1.5) / 1000) * 1000, costPrice: Math.round((baseC * 1.4) / 1000) * 1000 },
+        { id: Date.now() + '_p2', name: 'Porsi Double / Kenyang', sellingPrice: Math.round((baseP * 1.5) / 1000) * 1000, costPrice: Math.round((baseC * 1.4) / 1000) * 1000 },
       ];
     }
     setVariants([...variants, ...preset]);
     setHasVariants(true);
+  }
+
+  function handleApplyPresetModifier(type: 'rice_egg' | 'spicy' | 'cheese_sauce' | 'sweetness') {
+    let newGroup: ModifierGroup | null = null;
+    const now = Date.now().toString();
+
+    if (type === 'rice_egg') {
+      newGroup = {
+        id: now + '_addon',
+        name: 'Tambahan Pelengkap (Add-on)',
+        isRequired: false,
+        options: [
+          { id: now + '_rice', name: 'Tambah Nasi Putih', price: 5000 },
+          { id: now + '_egg', name: 'Tambah Telur Ceplok/Dadar', price: 4000 },
+          { id: now + '_krupuk', name: 'Tambah Kerupuk', price: 2000 },
+        ],
+      };
+    } else if (type === 'spicy') {
+      newGroup = {
+        id: now + '_spicy',
+        name: 'Pilihan Tingkat Kepedasan',
+        isRequired: true,
+        options: [
+          { id: now + '_lv0', name: 'Tidak Pedas', price: 0 },
+          { id: now + '_lv1', name: 'Sedang', price: 0 },
+          { id: now + '_lv2', name: 'Sangat Pedas', price: 0 },
+        ],
+      };
+    } else if (type === 'cheese_sauce') {
+      newGroup = {
+        id: now + '_top',
+        name: 'Extra Topping & Saus',
+        isRequired: false,
+        options: [
+          { id: now + '_chz', name: 'Extra Keju Melt / Slice', price: 4000 },
+          { id: now + '_sauce', name: 'Extra Saus BBQ / Mayo', price: 3000 },
+          { id: now + '_sambal', name: 'Extra Sambal Bawang', price: 3000 },
+        ],
+      };
+    } else if (type === 'sweetness') {
+      newGroup = {
+        id: now + '_sweet',
+        name: 'Level Gula & Es (Minuman)',
+        isRequired: true,
+        options: [
+          { id: now + '_norm', name: 'Normal Sweet & Ice', price: 0 },
+          { id: now + '_less', name: 'Less Sugar (50% Gula)', price: 0 },
+          { id: now + '_noice', name: 'Less Ice / No Ice', price: 0 },
+        ],
+      };
+    }
+
+    if (newGroup) {
+      setModifierGroups([...modifierGroups, newGroup]);
+    }
   }
 
   function handleAddModifierGroup() {
@@ -355,6 +585,36 @@ export default function AddProductScreen() {
 
     const finalStock = trackStock ? Math.max(0, parseInt(stock) || 0) : 999;
 
+    if (isEditMode && params.editId) {
+      productStore.updateProduct(params.editId, {
+        name: name.trim(),
+        category,
+        sellingPrice: sellNum,
+        costPrice: costNum,
+        stock: finalStock,
+        trackStock,
+        description: description.trim(),
+        recipeNote: recipeNote.trim(),
+        imageUri: visualType === 'image' ? (imageUri || undefined) : undefined,
+        iconName: selectedIcon,
+        colorHex: selectedColor,
+        hasVariants,
+        variants: hasVariants ? variants : [],
+        modifierGroups: modifierGroups,
+        availableOutlets: isAvailableAllOutlets ? ['all'] : [selectedAvailableOutlet],
+      });
+
+      showAlert(
+        'Menu Berhasil Diperbarui! 🎉',
+        `Perubahan pada menu "${name.trim()}" telah disimpan dan disinkronkan ke Kasir POS.`,
+        'success',
+        () => {
+          router.back();
+        }
+      );
+      return;
+    }
+
     const created = productStore.addProduct({
       name: name.trim(),
       category,
@@ -370,6 +630,7 @@ export default function AddProductScreen() {
       hasVariants,
       variants: hasVariants ? variants : [],
       modifierGroups: modifierGroups,
+      availableOutlets: isAvailableAllOutlets ? ['all'] : [selectedAvailableOutlet],
     });
 
     showAlert(
@@ -384,15 +645,15 @@ export default function AddProductScreen() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={{ flex: 1, backgroundColor: '#FAFAFA' }}>
+      <View style={{ flex: 1, backgroundColor: 'white' }}>
         {/* ── HEADER BAR ── */}
         <XStack
           backgroundColor="white"
-          px={isMobile ? 12 : 20}
-          py={10}
+          px={isMobile ? 16 : 24}
+          py={12}
           pt={insets.top + 8}
           borderBottomWidth={1}
-          borderColor="#E4E4E7"
+          borderColor="#F4F4F5"
           ai="center"
           jc="space-between"
         >
@@ -408,7 +669,7 @@ export default function AddProductScreen() {
 
           <XStack ai="center" gap={6}>
             <Text fontFamily="Geist_800ExtraBold" fontSize={16} color="#18181B">
-              Tambah Menu Baru
+              {isEditMode ? 'Edit Menu / Produk' : 'Tambah Menu Baru'}
             </Text>
           </XStack>
 
@@ -419,42 +680,31 @@ export default function AddProductScreen() {
         <ScrollView
           ref={mainScrollViewRef}
           f={1}
-          px={isMobile ? 12 : 20}
-          py={isMobile ? 12 : 20}
+          backgroundColor="white"
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets={true}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: insets.bottom + 140 }}
         >
-        <YStack gap={18} maxWidth={650} alignSelf="center" w="100%">
-          
-          {/* Main Card */}
           <YStack
-            backgroundColor="white"
-            p={isMobile ? 16 : 24}
-            br={16}
-            borderWidth={isMobile ? 0 : 1}
-            borderColor="#E4E4E7"
-            shadowColor="rgba(0,0,0,0.04)"
-            shadowRadius={12}
             gap={20}
+            maxWidth={650}
+            alignSelf="center"
+            w="100%"
+            px={isMobile ? 16 : 24}
+            py={isMobile ? 16 : 24}
+            backgroundColor="white"
           >
-            
-            {/* Title Info */}
-            <YStack pb={12} borderBottomWidth={1} borderColor="#F4F4F5" gap={4}>
-              <Text fontFamily="Geist_800ExtraBold" fontSize={18} color="#18181B">
-                Formulir Pendaftaran Menu
-              </Text>
-              <Text fontFamily="Geist_400Regular" fontSize={12} color="#71717A">
-                Lengkapi rincian produk untuk ditambahkan ke katalog resto
-              </Text>
-            </YStack>
-
             {/* Nama Produk Input */}
             <YStack gap={8}>
-              <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
-                Nama Menu / Produk *
-              </Text>
+              <YStack gap={2}>
+                <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
+                  Nama Menu / Produk *
+                </Text>
+                <Text fontFamily="Geist_400Regular" fontSize={12} color="#71717A">
+                  Lengkapi rincian produk untuk ditambahkan ke katalog resto
+                </Text>
+              </YStack>
               <Input
                 backgroundColor="#FAFAFA"
                 borderWidth={1}
@@ -474,41 +724,98 @@ export default function AddProductScreen() {
               />
             </YStack>
 
-            {/* ── ADAPTIVE KATEGORI SELECTOR UI ── */}
+            {/* ── ADAPTIVE KATEGORI SELECTOR UI (CHIPS JIKA <= 6, SELECT JIKA > 6) ── */}
             <YStack gap={8}>
-              <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
-                Kategori Menu (Opsional)
-              </Text>
-
-              {/* Render Chips with 'Umum' fallback and + Kategori button */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <XStack gap={8} py={2}>
-                  {Array.from(new Set(['Umum', ...categories])).map(cat => {
-                    const isSelected = category === cat;
-                    return (
-                      <TouchableOpacity
-                        key={cat}
-                        onPress={() => handleSelectCategory(cat)}
-                        style={{
-                          paddingHorizontal: 16,
-                          paddingVertical: 10,
-                          borderRadius: 10,
-                          backgroundColor: isSelected ? '#FF5722' : '#F4F4F5',
-                          borderWidth: 1,
-                          borderColor: isSelected ? '#FF5722' : '#E4E4E7',
-                        }}
-                      >
-                        <Text fontFamily="Geist_700Bold" fontSize={13} color={isSelected ? 'white' : '#52525B'}>
-                          {cat}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+              <XStack jc="space-between" ai="center">
+                <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
+                  Kategori Menu *
+                </Text>
+                {allCategories.length <= 6 && (
                   <TouchableOpacity
                     onPress={() => setNewCatModalVisible(true)}
                     style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 5,
+                      borderRadius: 8,
+                      backgroundColor: '#FFF3E0',
+                      borderWidth: 1,
+                      borderColor: '#FF5722',
+                      borderStyle: 'dashed',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    <Ionicons name="add-circle" size={14} color="#FF5722" />
+                    <Text fontFamily="Geist_700Bold" fontSize={12} color="#FF5722">
+                      Kategori Baru
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </XStack>
+
+              {allCategories.length <= 6 ? (
+                /* CHIPS KE SAMPING (HORIZONTAL SCROLL) */
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <XStack gap={8} py={2}>
+                    {allCategories.map(cat => {
+                      const isSelected = category === cat;
+                      return (
+                        <TouchableOpacity
+                          key={cat}
+                          onPress={() => handleSelectCategory(cat)}
+                          style={{
+                            paddingHorizontal: 16,
+                            paddingVertical: 9,
+                            borderRadius: 10,
+                            backgroundColor: isSelected ? '#FF5722' : '#F4F4F5',
+                            borderWidth: 1,
+                            borderColor: isSelected ? '#FF5722' : '#E4E4E7',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 6,
+                          }}
+                        >
+                          {isSelected && <Ionicons name="checkmark-circle" size={14} color="white" />}
+                          <Text fontFamily="Geist_700Bold" fontSize={13} color={isSelected ? 'white' : '#52525B'}>
+                            {cat}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </XStack>
+                </ScrollView>
+              ) : (
+                /* SELECT / DROPDOWN JIKA KATEGORI > 6 */
+                <XStack gap={8} ai="center">
+                  <TouchableOpacity
+                    onPress={() => setCatPickerVisible(true)}
+                    style={{
+                      flex: 1,
+                      height: 48,
+                      backgroundColor: '#FAFAFA',
+                      borderWidth: 1,
+                      borderColor: '#D4D4D8',
+                      borderRadius: 10,
                       paddingHorizontal: 14,
-                      paddingVertical: 10,
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <XStack ai="center" gap={8}>
+                      <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
+                        {category || 'Pilih Kategori Menu'}
+                      </Text>
+                    </XStack>
+                    <Ionicons name="chevron-down" size={18} color="#71717A" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => setNewCatModalVisible(true)}
+                    style={{
+                      height: 48,
+                      paddingHorizontal: 14,
                       borderRadius: 10,
                       backgroundColor: '#FFF3E0',
                       borderWidth: 1,
@@ -519,16 +826,16 @@ export default function AddProductScreen() {
                       gap: 6,
                     }}
                   >
-                    <Ionicons name="add" size={16} color="#FF5722" />
+                    <Ionicons name="add" size={18} color="#FF5722" />
                     <Text fontFamily="Geist_700Bold" fontSize={13} color="#FF5722">
                       Kategori Baru
                     </Text>
                   </TouchableOpacity>
                 </XStack>
-              </ScrollView>
+              )}
             </YStack>
 
-            {/* Harga Jual Utama & HPP Modal (Row) */}
+            {/* Harga Jual Utama & Biaya Modal Bahan */}
             <XStack gap={16} flexDirection={isMobile ? 'column' : 'row'}>
               <YStack f={1} gap={8}>
                 <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
@@ -540,7 +847,7 @@ export default function AddProductScreen() {
                   borderColor="#D4D4D8"
                   focusStyle={{ borderColor: '#FF5722', backgroundColor: 'white' }}
                   br={10}
-                  placeholder="Contoh: 15.000"
+                  placeholder="15.000"
                   placeholderTextColor="$gray10"
                   color="$gray12"
                   style={{ color: '#18181B' }}
@@ -552,21 +859,24 @@ export default function AddProductScreen() {
                   height={48}
                   px={14}
                 />
-                {hasVariants && (
-                  <Text fontFamily="Geist_400Regular" fontSize={11} color="#71717A">
-                    Saat Varian aktif, harga varian akan menggantikan harga ini di kasir.
-                  </Text>
+                {hasVariants && variants.length > 0 && (
+                  <XStack backgroundColor="#FFF7ED" p={8} br={8} borderWidth={1} borderColor="#FFEDD5" gap={6} ai="center">
+                    <Ionicons name="information-circle" size={16} color="#EA580C" />
+                    <Text fontFamily="Geist_500Medium" fontSize={11} color="#C2410C" f={1}>
+                      Pilihan ukuran aktif: Kasir akan menggunakan harga sesuai ukuran yang dipilih pelanggan.
+                    </Text>
+                  </XStack>
                 )}
               </YStack>
 
               <YStack f={1} gap={8}>
                 <XStack jc="space-between" ai="center">
                   <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
-                    HPP / Modal awal (Rp)
+                    Biaya Modal Bahan (Opsional)
                   </Text>
                   <TouchableOpacity onPress={() => setBomModalVisible(true)}>
                     <Text fontFamily="Geist_700Bold" fontSize={12} color="#FF5722">
-                      Hitung Modal Bahan
+                      Hitung Bahan Baku
                     </Text>
                   </TouchableOpacity>
                 </XStack>
@@ -576,7 +886,7 @@ export default function AddProductScreen() {
                   borderColor="#D4D4D8"
                   focusStyle={{ borderColor: '#FF5722', backgroundColor: 'white' }}
                   br={10}
-                  placeholder="Contoh: 8.500"
+                  placeholder="8.500"
                   placeholderTextColor="$gray10"
                   color="$gray12"
                   style={{ color: '#18181B' }}
@@ -604,7 +914,7 @@ export default function AddProductScreen() {
               >
                 <YStack>
                   <Text fontFamily="Geist_700Bold" fontSize={12} color={profit >= 0 ? '#047857' : '#B91C1C'}>
-                    Estimasi Margin Keuntungan
+                    Estimasi Untung Bersih (Harga - Modal)
                   </Text>
                   <Text fontFamily="Geist_800ExtraBold" fontSize={16} color={profit >= 0 ? '#10B981' : '#EF4444'}>
                     Rp {profit.toLocaleString('id-ID')} / porsi
@@ -620,21 +930,305 @@ export default function AddProductScreen() {
                   }}
                 >
                   <Text fontFamily="Geist_800ExtraBold" fontSize={12} color="white">
-                    Profit Margin {marginPercent}%
+                    Untung {marginPercent}%
                   </Text>
                 </View>
               </XStack>
             )}
+
+            {/* ── TAMPILAN VISUAL & FOTO MENU ── */}
+            <YStack gap={12} backgroundColor="#FAFAFA" p={14} br={12} borderWidth={1} borderColor="#E4E4E7">
+              <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
+                Tampilan Visual Menu
+              </Text>
+
+              {/* Segmented 2-Tab Selector: Foto Produk vs Ikon & Warna (Mutually Exclusive) */}
+              <XStack backgroundColor="#E4E4E7" p={3} br={10} gap={4}>
+                <TouchableOpacity
+                  onPress={() => setVisualType('image')}
+                  activeOpacity={0.8}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 7,
+                    alignItems: 'center',
+                    borderRadius: 8,
+                    backgroundColor: visualType === 'image' ? 'white' : 'transparent',
+                    borderWidth: visualType === 'image' ? 1 : 0,
+                    borderColor: visualType === 'image' ? '#D4D4D8' : 'transparent',
+                  }}
+                >
+                  <XStack ai="center" gap={6}>
+                    <Ionicons name="camera" size={15} color={visualType === 'image' ? '#FF5722' : '#71717A'} />
+                    <Text
+                      fontFamily="Geist_700Bold"
+                      fontSize={12}
+                      color={visualType === 'image' ? '#FF5722' : '#71717A'}
+                    >
+                      Foto Produk
+                    </Text>
+                  </XStack>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    setVisualType('icon');
+                    setImageUri(null);
+                  }}
+                  activeOpacity={0.8}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 7,
+                    alignItems: 'center',
+                    borderRadius: 8,
+                    backgroundColor: visualType === 'icon' ? 'white' : 'transparent',
+                    borderWidth: visualType === 'icon' ? 1 : 0,
+                    borderColor: visualType === 'icon' ? '#D4D4D8' : 'transparent',
+                  }}
+                >
+                  <XStack ai="center" gap={6}>
+                    <Ionicons name="color-palette" size={15} color={visualType === 'icon' ? '#FF5722' : '#71717A'} />
+                    <Text
+                      fontFamily="Geist_700Bold"
+                      fontSize={12}
+                      color={visualType === 'icon' ? '#FF5722' : '#71717A'}
+                    >
+                      Ikon & Warna
+                    </Text>
+                  </XStack>
+                </TouchableOpacity>
+              </XStack>
+
+              {/* TAB 1: MODE FOTO PRODUK */}
+              {visualType === 'image' ? (
+                <XStack gap={12} ai="center" p={10} backgroundColor="white" br={10} borderWidth={1} borderColor="#E4E4E7">
+                  <TouchableOpacity
+                    onPress={() => setPhotoOptionsModalVisible(true)}
+                    activeOpacity={0.8}
+                    style={{
+                      width: 54,
+                      height: 54,
+                      borderRadius: 10,
+                      backgroundColor: imageUri ? 'white' : '#F4F4F5',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: '#E4E4E7',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {imageUri ? (
+                      <Image source={{ uri: imageUri }} style={{ width: 54, height: 54 }} resizeMode="cover" />
+                    ) : (
+                      <Ionicons name="image-outline" size={24} color="#A1A1AA" />
+                    )}
+                  </TouchableOpacity>
+
+                  <YStack f={1} gap={4}>
+                    <Text fontFamily="Geist_700Bold" fontSize={13} color="#18181B">
+                      {imageUri ? 'Foto Siap Digunakan' : 'Belum Ada Foto'}
+                    </Text>
+                    <XStack gap={8} ai="center">
+                      <TouchableOpacity
+                        onPress={() => setPhotoOptionsModalVisible(true)}
+                        style={{
+                          backgroundColor: '#FF5722',
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 8,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        <Ionicons name="camera" size={13} color="white" />
+                        <Text fontFamily="Geist_700Bold" fontSize={12} color="white">
+                          {imageUri ? 'Ganti Foto' : 'Unggah Foto'}
+                        </Text>
+                      </TouchableOpacity>
+
+                      {imageUri && (
+                        <TouchableOpacity
+                          onPress={() => setImageUri(null)}
+                          style={{
+                            backgroundColor: '#FEF2F2',
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: 8,
+                          }}
+                        >
+                          <Text fontFamily="Geist_700Bold" fontSize={12} color="#EF4444">
+                            Hapus Foto
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </XStack>
+                  </YStack>
+                </XStack>
+              ) : (
+                /* TAB 2: MODE IKON & WARNA */
+                <YStack gap={10}>
+                  {/* Icon Card Preview */}
+                  <XStack gap={12} ai="center" p={10} backgroundColor="white" br={10} borderWidth={1} borderColor="#E4E4E7">
+                    <View
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 10,
+                        backgroundColor: selectedColor,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Ionicons name={selectedIcon as any} size={22} color="white" />
+                    </View>
+                    <YStack f={1}>
+                      <Text fontFamily="Geist_700Bold" fontSize={13} color="#18181B">
+                        Pratinjau Badge Kasir
+                      </Text>
+                      <Text fontFamily="Geist_400Regular" fontSize={11} color="#71717A">
+                        Ikon & warna yang tampil pada menu kasir
+                      </Text>
+                    </YStack>
+                  </XStack>
+
+                  {/* Colors */}
+                  <YStack gap={4}>
+                    <Text fontFamily="Geist_600SemiBold" fontSize={11} color="#71717A">
+                      Warna Badge:
+                    </Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      <XStack gap={8} py={2}>
+                        {[
+                          '#FF5722', '#EF4444', '#F59E0B', '#10B981', '#14B8A6',
+                          '#06B6D4', '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899', '#475569',
+                        ].map(color => (
+                          <TouchableOpacity
+                            key={color}
+                            onPress={() => setSelectedColor(color)}
+                            style={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: 14,
+                              backgroundColor: color,
+                              borderWidth: selectedColor === color ? 2.5 : 0,
+                              borderColor: '#18181B',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                            }}
+                          >
+                            {selectedColor === color && <Ionicons name="checkmark" size={14} color="white" />}
+                          </TouchableOpacity>
+                        ))}
+                      </XStack>
+                    </ScrollView>
+                  </YStack>
+
+                  {/* Icons */}
+                  <YStack gap={4}>
+                    <Text fontFamily="Geist_600SemiBold" fontSize={11} color="#71717A">
+                      Pilihan Ikon:
+                    </Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      <XStack gap={6}>
+                        {[
+                          { id: 'restaurant-outline', label: 'Makanan' },
+                          { id: 'cafe-outline', label: 'Kopi' },
+                          { id: 'pizza-outline', label: 'Snack' },
+                          { id: 'wine-outline', label: 'Minuman' },
+                          { id: 'ice-cream-outline', label: 'Dessert' },
+                          { id: 'flame-outline', label: 'Pedas' },
+                          { id: 'leaf-outline', label: 'Sehat' },
+                        ].map(item => {
+                          const isSel = selectedIcon === item.id;
+                          return (
+                            <TouchableOpacity
+                              key={item.id}
+                              onPress={() => setSelectedIcon(item.id)}
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 4,
+                                paddingHorizontal: 10,
+                                paddingVertical: 6,
+                                borderRadius: 8,
+                                backgroundColor: isSel ? selectedColor : '#FFFFFF',
+                                borderWidth: 1,
+                                borderColor: isSel ? selectedColor : '#E4E4E7',
+                              }}
+                            >
+                              <Ionicons name={item.id as any} size={14} color={isSel ? 'white' : '#52525B'} />
+                              <Text fontFamily="Geist_700Bold" fontSize={11} color={isSel ? 'white' : '#52525B'}>
+                                {item.label}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </XStack>
+                    </ScrollView>
+                  </YStack>
+                </YStack>
+              )}
+            </YStack>
+
+            {/* Deskripsi Menu (Opsional) */}
+            <YStack gap={8}>
+              <XStack jc="space-between" ai="center">
+                <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
+                  Deskripsi / Catatan Menu
+                </Text>
+
+                <TouchableOpacity
+                  onPress={handleRequestAiDescription}
+                  activeOpacity={0.7}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 5,
+                    backgroundColor: '#FFF7ED',
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: '#FFEDD5',
+                  }}
+                >
+                  <Ionicons name="sparkles" size={13} color="#EA580C" />
+                  <Text fontFamily="Geist_700Bold" fontSize={12} color="#EA580C">
+                    Saran AI
+                  </Text>
+                </TouchableOpacity>
+              </XStack>
+
+              <TextArea
+                backgroundColor="#FAFAFA"
+                borderWidth={1}
+                borderColor="#D4D4D8"
+                focusStyle={{ borderColor: '#FF5722', backgroundColor: 'white' }}
+                br={10}
+                placeholder="Contoh: Ayam goreng khas Soodap dipadu dengan kremes renyah & sambal bawang pedas."
+                placeholderTextColor="$gray10"
+                color="$gray12"
+                style={{ color: '#18181B' }}
+                textAlignVertical="top"
+                value={description}
+                onChangeText={setDescription}
+                fontFamily="Geist_400Regular"
+                fontSize={13}
+                minHeight={80}
+                maxHeight={220}
+                p={12}
+              />
+            </YStack>
 
             {/* ── STOK FLEKSIBEL / LACAK STOK FISIK ── */}
             <YStack backgroundColor="#FAFAFA" p={16} br={14} borderWidth={1} borderColor="#E4E4E7" gap={14}>
               <XStack jc="space-between" ai="center">
                 <YStack f={1} pr={10} gap={2}>
                   <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
-                    Lacak Stok Fisik (Opsional)
+                    Lacak Stok Fisik
                   </Text>
-                  <Text fontFamily="Geist_400Regular" fontSize={12} color="#71717A" lineHeight={18}>
-                    Aktifkan jika produk memiliki stok fisik pasti yang dibatasi (misal: Porsi Ayam Goreng, Bahan Masak Fix, atau Minuman Botol/Kaleng).
+                  <Text fontFamily="Geist_400Regular" fontSize={12} color="#71717A" lineHeight={16}>
+                    Biarkan mati jika menu selalu siap dibuat (tanpa batasan porsi).
                   </Text>
                 </YStack>
 
@@ -649,13 +1243,13 @@ export default function AddProductScreen() {
               {!trackStock ? (
                 /* MODUS TANPA STOK (UNLIMITED - DEFAULT FOR F&B) */
                 <XStack backgroundColor="#FFF3E0" p={12} br={10} ai="center" gap={10} borderWidth={1} borderColor="#FFCC80">
-                  <Ionicons name="infinite" size={22} color="#FF5722" />
+                  <Ionicons name="infinite" size={20} color="#FF5722" />
                   <YStack f={1} gap={2}>
                     <Text fontFamily="Geist_800ExtraBold" fontSize={13} color="#FF5722">
-                      ∞ Tanpa Batas Stok (Fleksibel F&B)
+                      ∞ Stok Selalu Tersedia (Bebas Dipesan)
                     </Text>
-                    <Text fontFamily="Geist_400Regular" fontSize={12} color="#71717A" lineHeight={16}>
-                      Menu siap dibuat kapan saja dari bahan baku. Kasir tidak akan dibatasi oleh stok habis.
+                    <Text fontFamily="Geist_400Regular" fontSize={12} color="#71717A" lineHeight={15}>
+                      Menu dibuat on-demand tanpa batasan kuota stok.
                     </Text>
                   </YStack>
                 </XStack>
@@ -664,10 +1258,10 @@ export default function AddProductScreen() {
                 <YStack gap={8} pt={4}>
                   <YStack gap={2}>
                     <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
-                      Input Jumlah Stok Fisik Awal *
+                      Jumlah Stok Awal *
                     </Text>
                     <Text fontFamily="Geist_400Regular" fontSize={12} color="#71717A">
-                      Jumlah porsi ayam, bahan masak, atau botol yang siap dijual
+                      Jumlah porsi atau unit barang yang siap dijual saat ini.
                     </Text>
                   </YStack>
                   <XStack ai="center" gap={10}>
@@ -729,24 +1323,24 @@ export default function AddProductScreen() {
               )}
             </YStack>
 
-            {/* ── KUSTOMISASI TINGKAT LANJUT: VARIAN & EXTRA TOPPING ── */}
-            <YStack backgroundColor="#FAFAFA" p={16} br={14} borderWidth={1} borderColor="#E4E4E7" gap={14}>
+            {/* ── PILIHAN UKURAN & TOPPING (RINGKAS & BERSIH) ── */}
+            <YStack backgroundColor="#FAFAFA" p={14} br={12} borderWidth={1} borderColor="#E4E4E7" gap={12}>
               <XStack jc="space-between" ai="center">
-                <YStack f={1} pr={10} gap={2}>
+                <YStack f={1} pr={8}>
                   <XStack ai="center" gap={6}>
                     <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
-                      Kustomisasi Menu (Opsional)
+                      Ukuran & Topping Tambahan
                     </Text>
                     {(variants.length > 0 || modifierGroups.length > 0) && (
-                      <View style={{ backgroundColor: '#18181B', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
-                        <Text fontFamily="Geist_700Bold" fontSize={11} color="white">
-                          {(variants.length > 0 ? 1 : 0) + modifierGroups.length} Aktif
+                      <View style={{ backgroundColor: '#18181B', paddingHorizontal: 7, paddingVertical: 1, borderRadius: 8 }}>
+                        <Text fontFamily="Geist_700Bold" fontSize={10} color="white">
+                          {(variants.length > 0 ? 1 : 0) + modifierGroups.reduce((acc, g) => acc + g.options.length, 0)} Aktif
                         </Text>
                       </View>
                     )}
                   </XStack>
-                  <Text fontFamily="Geist_400Regular" fontSize={12} color="#71717A" lineHeight={16}>
-                    Aktifkan jika menu membutuhkan ukuran/porsi berbeda (Varian) atau topping/ekstra tambahan.
+                  <Text fontFamily="Geist_400Regular" fontSize={12} color="#71717A">
+                    Pilihan ukuran (Reguler/Jumbo) atau pelengkap (+ Nasi, Telur).
                   </Text>
                 </YStack>
 
@@ -766,309 +1360,261 @@ export default function AddProductScreen() {
               </XStack>
 
               {showCustomOptions && (
-                <YStack gap={14} pt={4}>
-                  {/* Tab Selector: Varian Utama vs Extra / Topping */}
-                  <XStack backgroundColor="#F4F4F5" p={4} br={10} gap={4} borderWidth={1} borderColor="#E4E4E7">
+                <YStack gap={10} pt={2}>
+                  {/* Segmented Switch: Ukuran vs Topping */}
+                  <XStack backgroundColor="#E4E4E7" p={3} br={8} gap={4}>
                     <TouchableOpacity
                       onPress={() => setActiveCustomTab('variants')}
                       style={{
                         flex: 1,
-                        paddingVertical: 8,
-                        borderRadius: 8,
+                        paddingVertical: 6,
+                        borderRadius: 6,
                         backgroundColor: activeCustomTab === 'variants' ? 'white' : 'transparent',
                         alignItems: 'center',
-                        borderWidth: activeCustomTab === 'variants' ? 1 : 0,
-                        borderColor: activeCustomTab === 'variants' ? '#D4D4D8' : 'transparent',
                       }}
                     >
-                      <XStack ai="center" gap={6}>
-                        <Text fontFamily="Geist_700Bold" fontSize={13} color={activeCustomTab === 'variants' ? '#18181B' : '#71717A'}>
-                          Varian Utama
-                        </Text>
-                        {variants.length > 0 && (
-                          <View style={{ backgroundColor: '#18181B', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1 }}>
-                            <Text fontFamily="Geist_700Bold" fontSize={10} color="white">{variants.length}</Text>
-                          </View>
-                        )}
-                      </XStack>
+                      <Text fontFamily="Geist_700Bold" fontSize={12} color={activeCustomTab === 'variants' ? '#18181B' : '#71717A'}>
+                        Ukuran & Porsi {variants.length > 0 ? `(${variants.length})` : ''}
+                      </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
                       onPress={() => setActiveCustomTab('modifiers')}
                       style={{
                         flex: 1,
-                        paddingVertical: 8,
-                        borderRadius: 8,
+                        paddingVertical: 6,
+                        borderRadius: 6,
                         backgroundColor: activeCustomTab === 'modifiers' ? 'white' : 'transparent',
                         alignItems: 'center',
-                        borderWidth: activeCustomTab === 'modifiers' ? 1 : 0,
-                        borderColor: activeCustomTab === 'modifiers' ? '#D4D4D8' : 'transparent',
                       }}
                     >
-                      <XStack ai="center" gap={6}>
-                        <Text fontFamily="Geist_700Bold" fontSize={13} color={activeCustomTab === 'modifiers' ? '#18181B' : '#71717A'}>
-                          Extra & Topping
-                        </Text>
-                        {modifierGroups.length > 0 && (
-                          <View style={{ backgroundColor: '#18181B', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1 }}>
-                            <Text fontFamily="Geist_700Bold" fontSize={10} color="white">{modifierGroups.length}</Text>
-                          </View>
-                        )}
-                      </XStack>
+                      <Text fontFamily="Geist_700Bold" fontSize={12} color={activeCustomTab === 'modifiers' ? '#18181B' : '#71717A'}>
+                        Topping & Tambahan {modifierGroups.length > 0 ? `(${modifierGroups.reduce((acc, g) => acc + g.options.length, 0)})` : ''}
+                      </Text>
                     </TouchableOpacity>
                   </XStack>
 
-                  {/* TAB 1: VARIAN UTAMA */}
+                  {/* TAB 1: UKURAN & PORSI */}
                   {activeCustomTab === 'variants' && (
                     <YStack gap={10}>
-                      {/* Tip Kejelasan Varian */}
-                      <XStack backgroundColor="#F4F4F5" p={10} br={8} borderWidth={1} borderColor="#E4E4E7" ai="flex-start" gap={8}>
-                        <Ionicons name="information-circle-outline" size={16} color="#71717A" style={{ marginTop: 2 }} />
-                        <YStack f={1} gap={2}>
-                          <Text fontFamily="Geist_700Bold" fontSize={12} color="#18181B">
-                            Gunakan Varian Utama jika:
-                          </Text>
-                          <Text fontFamily="Geist_400Regular" fontSize={11} color="#71717A" lineHeight={15}>
-                            Menu memiliki ukuran (Small/Large) atau suhu (Hot/Ice) dengan **HARGA TOTAL** tersendiri yang menggantikan harga utama.
-                          </Text>
-                        </YStack>
-                      </XStack>
-
-                      {/* Preset Cepat */}
-                      <YStack gap={6}>
-                        <Text fontFamily="Geist_600SemiBold" fontSize={12} color="#52525B">
-                          Template Cepat:
-                        </Text>
-                        <XStack gap={6} fw="wrap">
-                          <TouchableOpacity
-                            onPress={() => handleApplyPresetVariant('size')}
-                            style={{ backgroundColor: 'white', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: '#E4E4E7' }}
-                          >
-                            <Text fontFamily="Geist_600SemiBold" fontSize={11} color="#3F3F46">+ Ukuran (Regular & Large)</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            onPress={() => handleApplyPresetVariant('temp')}
-                            style={{ backgroundColor: 'white', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: '#E4E4E7' }}
-                          >
-                            <Text fontFamily="Geist_600SemiBold" fontSize={11} color="#3F3F46">+ Suhu (Panas & Dingin)</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            onPress={() => handleApplyPresetVariant('portion')}
-                            style={{ backgroundColor: 'white', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: '#E4E4E7' }}
-                          >
-                            <Text fontFamily="Geist_600SemiBold" fontSize={11} color="#3F3F46">+ Porsi (Biasa & Double)</Text>
-                          </TouchableOpacity>
-                        </XStack>
-                      </YStack>
-
+                      {/* Form Tambah Ukuran (Atas-Bawah Rapi & Jelas) */}
                       <YStack gap={8} p={12} backgroundColor="white" br={10} borderWidth={1} borderColor="#E4E4E7">
-                        <Text fontFamily="Geist_700Bold" fontSize={13} color="#18181B">
-                          + Tambah Varian Baru
-                        </Text>
-                        <Input
-                          placeholder="Nama Varian (misal: Large / Jumbo / Hot)"
-                          value={varNameInput}
-                          onChangeText={setVarNameInput}
-                          backgroundColor="#F4F4F5"
-                          br={8}
-                          fontSize={13}
-                          height={40}
-                        />
-                        <XStack gap={8}>
+                        <YStack gap={4}>
+                          <Text fontFamily="Geist_600SemiBold" fontSize={12} color="#18181B">
+                            Nama Ukuran / Porsi
+                          </Text>
                           <Input
-                            f={1}
-                            placeholder="Harga Total Varian (Rp)"
+                            placeholder="Contoh: Regular / Jumbo / Dingin"
+                            placeholderTextColor="$gray10"
+                            value={varNameInput}
+                            onChangeText={setVarNameInput}
+                            backgroundColor="#F9FAFB"
+                            borderWidth={1}
+                            borderColor="#D4D4D8"
+                            br={8}
+                            fontSize={13}
+                            height={40}
+                            style={{ color: '#18181B' }}
+                          />
+                        </YStack>
+
+                        <YStack gap={4}>
+                          <Text fontFamily="Geist_600SemiBold" fontSize={12} color="#18181B">
+                            Harga Jual Total (Rp)
+                          </Text>
+                          <Input
+                            placeholder="Contoh: 18.000 (Harga jual ukuran ini)"
+                            placeholderTextColor="$gray10"
                             value={varPriceInput}
                             onChangeText={(val) => setVarPriceInput(formatNumberWithDots(val))}
                             keyboardType="number-pad"
-                            backgroundColor="#F4F4F5"
+                            backgroundColor="#F9FAFB"
+                            borderWidth={1}
+                            borderColor="#D4D4D8"
                             br={8}
                             fontSize={13}
                             height={40}
+                            style={{ color: '#18181B' }}
                           />
-                          <Input
-                            f={1}
-                            placeholder="Modal/HPP Varian (Rp)"
-                            value={varCostInput}
-                            onChangeText={(val) => setVarCostInput(formatNumberWithDots(val))}
-                            keyboardType="number-pad"
-                            backgroundColor="#F4F4F5"
-                            br={8}
-                            fontSize={13}
-                            height={40}
-                          />
-                        </XStack>
+                        </YStack>
+
                         <TouchableOpacity
                           onPress={handleAddVariant}
                           style={{
-                            backgroundColor: '#18181B',
+                            backgroundColor: '#FF5722',
                             paddingVertical: 10,
                             borderRadius: 8,
                             alignItems: 'center',
+                            marginTop: 2,
                           }}
                         >
                           <Text fontFamily="Geist_700Bold" fontSize={13} color="white">
-                            + Tambahkan Varian
+                            + Tambahkan Ukuran / Porsi
                           </Text>
                         </TouchableOpacity>
                       </YStack>
 
-                      {/* List Varian */}
+                      {/* Template Cepat */}
+                      <XStack gap={6} ai="center" flexWrap="wrap">
+                        <Text fontFamily="Geist_500Medium" fontSize={11} color="#71717A">
+                          Template:
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => handleApplyPresetVariant('size')}
+                          style={{ backgroundColor: 'white', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, borderWidth: 1, borderColor: '#D4D4D8' }}
+                        >
+                          <Text fontFamily="Geist_600SemiBold" fontSize={11} color="#3F3F46">+ Reguler & Jumbo</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => handleApplyPresetVariant('temp')}
+                          style={{ backgroundColor: 'white', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, borderWidth: 1, borderColor: '#D4D4D8' }}
+                        >
+                          <Text fontFamily="Geist_600SemiBold" fontSize={11} color="#3F3F46">+ Panas & Dingin</Text>
+                        </TouchableOpacity>
+                      </XStack>
+
+                      {/* List Ukuran */}
                       {variants.map((v) => (
-                        <XStack key={v.id} backgroundColor="white" p={12} br={10} borderWidth={1} borderColor="#E4E4E7" ai="center" jc="space-between">
-                          <YStack gap={2}>
-                            <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
-                              {v.name}
+                        <XStack key={v.id} backgroundColor="white" p={10} br={8} borderWidth={1} borderColor="#E4E4E7" ai="center" jc="space-between">
+                          <Text fontFamily="Geist_700Bold" fontSize={13} color="#18181B">
+                            {v.name}
+                          </Text>
+                          <XStack ai="center" gap={10}>
+                            <Text fontFamily="Geist_700Bold" fontSize={12} color="#FF5722">
+                              Rp {v.sellingPrice.toLocaleString('id-ID')}
                             </Text>
-                            <Text fontFamily="Geist_600SemiBold" fontSize={12} color="#18181B">
-                              Rp {v.sellingPrice.toLocaleString('id-ID')} {v.costPrice ? `(Modal: Rp ${v.costPrice.toLocaleString('id-ID')})` : ''}
-                            </Text>
-                          </YStack>
-                          <TouchableOpacity onPress={() => handleRemoveVariant(v.id)}>
-                            <Ionicons name="trash-outline" size={18} color="#71717A" />
-                          </TouchableOpacity>
+                            <TouchableOpacity onPress={() => handleRemoveVariant(v.id)}>
+                              <Ionicons name="trash-outline" size={16} color="#71717A" />
+                            </TouchableOpacity>
+                          </XStack>
                         </XStack>
                       ))}
                     </YStack>
                   )}
 
-                  {/* TAB 2: EXTRA & TOPPING (MODIFIERS) */}
+                  {/* TAB 2: TOPPING & TAMBAHAN */}
                   {activeCustomTab === 'modifiers' && (
                     <YStack gap={10}>
-                      {/* Helper Tip Box */}
-                      <XStack backgroundColor="#F4F4F5" p={10} br={8} borderWidth={1} borderColor="#E4E4E7" ai="flex-start" gap={8}>
-                        <Ionicons name="information-circle-outline" size={16} color="#71717A" style={{ marginTop: 2 }} />
-                        <YStack f={1} gap={2}>
-                          <Text fontFamily="Geist_700Bold" fontSize={12} color="#18181B">
-                            Gunakan Extra & Topping jika:
+                      {/* Form Tambah Topping / Opsi (Atas-Bawah Rapi & Jelas) */}
+                      <YStack gap={8} p={12} backgroundColor="white" br={10} borderWidth={1} borderColor="#E4E4E7">
+                        <YStack gap={4}>
+                          <Text fontFamily="Geist_600SemiBold" fontSize={12} color="#18181B">
+                            Nama Topping / Pilihan Rasa
                           </Text>
-                          <Text fontFamily="Geist_400Regular" fontSize={11} color="#71717A" lineHeight={15}>
-                            Menu memiliki kustomisasi opsional atau tambahan ekstra dengan **HARGA TAMBAHAN (+Rp)** (misal: Level Pedas, Extra Nasi, Extra Keju).
-                          </Text>
-                        </YStack>
-                      </XStack>
-
-                      {/* Form Tambah Grup Opsi Baru */}
-                      <YStack gap={10} p={12} backgroundColor="white" br={10} borderWidth={1} borderColor="#E4E4E7">
-                        <Text fontFamily="Geist_700Bold" fontSize={13} color="#18181B">
-                          + Buat Grup Opsi Baru
-                        </Text>
-                        <Input
-                          placeholder="Nama Grup (misal: Pilihan Nasi, Level Pedas, Topping)"
-                          value={groupNameInput}
-                          onChangeText={setGroupNameInput}
-                          backgroundColor="#F4F4F5"
-                          br={8}
-                          fontSize={13}
-                          height={40}
-                        />
-                        <XStack jc="space-between" ai="center" py={4}>
-                          <Text fontFamily="Geist_500Medium" fontSize={12} color="#3F3F46">
-                            Wajib Dipilih Kasir? (Misal Nasi/Level Pedas)
-                          </Text>
-                          <Switch
-                            value={groupIsRequired}
-                            onValueChange={setGroupIsRequired}
-                            trackColor={{ false: '#E4E4E7', true: '#FFCC80' }}
-                            thumbColor={groupIsRequired ? '#FF5722' : '#FAFAFA'}
+                          <Input
+                            placeholder="Contoh: + Nasi Putih / + Telur / Sedang"
+                            placeholderTextColor="$gray10"
+                            value={optNameInput}
+                            onChangeText={setOptNameInput}
+                            backgroundColor="#F9FAFB"
+                            borderWidth={1}
+                            borderColor="#D4D4D8"
+                            br={8}
+                            fontSize={13}
+                            height={40}
+                            style={{ color: '#18181B' }}
                           />
-                        </XStack>
+                        </YStack>
+
+                        <YStack gap={4}>
+                          <Text fontFamily="Geist_600SemiBold" fontSize={12} color="#18181B">
+                            Tambahan Harga (Rp)
+                          </Text>
+                          <Input
+                            placeholder="Contoh: 5.000 (Isi 0 jika gratis / tidak ubah harga)"
+                            placeholderTextColor="$gray10"
+                            value={optPriceInput}
+                            onChangeText={(val) => setOptPriceInput(formatNumberWithDots(val))}
+                            keyboardType="number-pad"
+                            backgroundColor="#F9FAFB"
+                            borderWidth={1}
+                            borderColor="#D4D4D8"
+                            br={8}
+                            fontSize={13}
+                            height={40}
+                            style={{ color: '#18181B' }}
+                          />
+                        </YStack>
+
                         <TouchableOpacity
-                          onPress={handleAddModifierGroup}
+                          onPress={() => {
+                            const trimmed = optNameInput.trim();
+                            if (!trimmed) {
+                              showAlert('Perhatian', 'Harap isi nama pilihan atau topping.');
+                              return;
+                            }
+                            const price = parseInt(optPriceInput.replace(/\D/g, '')) || 0;
+                            const now = Date.now().toString();
+                            const updated = [...modifierGroups];
+                            if (updated.length === 0) {
+                              updated.push({
+                                id: now + '_grp',
+                                name: 'Topping & Pilihan Rasa',
+                                isRequired: false,
+                                options: [{ id: now + '_opt', name: trimmed, price }],
+                              });
+                            } else {
+                              updated[0].options.push({
+                                id: now + '_' + Math.random().toString(36).substring(2, 5),
+                                name: trimmed,
+                                price,
+                              });
+                            }
+                            setModifierGroups(updated);
+                            setOptNameInput('');
+                            setOptPriceInput('');
+                          }}
                           style={{
-                            backgroundColor: '#18181B',
+                            backgroundColor: '#FF5722',
                             paddingVertical: 10,
                             borderRadius: 8,
                             alignItems: 'center',
+                            marginTop: 2,
                           }}
                         >
                           <Text fontFamily="Geist_700Bold" fontSize={13} color="white">
-                            + Tambah Grup Opsi
+                            + Tambahkan Pilihan Ini
                           </Text>
                         </TouchableOpacity>
                       </YStack>
 
-                      {/* List Grup Modifier */}
-                      {modifierGroups.map((group, idx) => (
-                        <YStack key={group.id} backgroundColor="white" p={14} br={10} borderWidth={1} borderColor="#E4E4E7" gap={10}>
-                          <XStack jc="space-between" ai="center">
-                            <XStack ai="center" gap={6}>
-                              <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
-                                {group.name}
-                              </Text>
-                              <Text fontFamily="Geist_500Medium" fontSize={11} color="#3F3F46" style={{ backgroundColor: '#F4F4F5', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#E4E4E7' }}>
-                                {group.isRequired ? 'Wajib Pilih 1' : 'Opsional'}
-                              </Text>
-                            </XStack>
-                            <TouchableOpacity onPress={() => handleRemoveModifierGroup(idx)}>
-                              <Ionicons name="trash-outline" size={18} color="#71717A" />
-                            </TouchableOpacity>
-                          </XStack>
+                      {/* Template Cepat */}
+                      <XStack gap={6} ai="center" flexWrap="wrap">
+                        <Text fontFamily="Geist_500Medium" fontSize={11} color="#71717A">
+                          Template:
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => handleApplyPresetModifier('rice_egg')}
+                          style={{ backgroundColor: 'white', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, borderWidth: 1, borderColor: '#D4D4D8' }}
+                        >
+                          <Text fontFamily="Geist_600SemiBold" fontSize={11} color="#3F3F46">+ Nasi & Telur (+Rp)</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => handleApplyPresetModifier('spicy')}
+                          style={{ backgroundColor: 'white', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, borderWidth: 1, borderColor: '#D4D4D8' }}
+                        >
+                          <Text fontFamily="Geist_600SemiBold" fontSize={11} color="#3F3F46">+ Level Pedas (Gratis / Rp 0)</Text>
+                        </TouchableOpacity>
+                      </XStack>
 
-                          {/* List Opsi dalam Grup */}
+                      {/* List Topping & Pilihan Rasa */}
+                      {modifierGroups.map((group, gIdx) => (
+                        <YStack key={group.id} gap={6}>
                           {group.options.map((opt) => (
-                            <XStack key={opt.id} backgroundColor="#F9FAFB" p={8} px={12} br={8} jc="space-between" ai="center">
-                              <Text fontFamily="Geist_500Medium" fontSize={13} color="#18181B">
-                                • {opt.name}
+                            <XStack key={opt.id} backgroundColor="white" p={10} br={8} borderWidth={1} borderColor="#E4E4E7" ai="center" jc="space-between">
+                              <Text fontFamily="Geist_600SemiBold" fontSize={13} color="#18181B">
+                                {opt.name}
                               </Text>
                               <XStack ai="center" gap={10}>
-                                <Text fontFamily="Geist_600SemiBold" fontSize={12} color="#18181B">
-                                  {opt.price > 0 ? `+Rp ${opt.price.toLocaleString('id-ID')}` : 'Gratis'}
+                                <Text fontFamily="Geist_700Bold" fontSize={12} color={opt.price > 0 ? '#16A34A' : '#71717A'}>
+                                  {opt.price > 0 ? `+Rp ${opt.price.toLocaleString('id-ID')}` : 'Gratis (Rp 0)'}
                                 </Text>
-                                <TouchableOpacity onPress={() => handleRemoveOptionFromGroup(idx, opt.id)}>
-                                  <Ionicons name="close-circle" size={16} color="#9CA3AF" />
+                                <TouchableOpacity onPress={() => handleRemoveOptionFromGroup(gIdx, opt.id)}>
+                                  <Ionicons name="trash-outline" size={16} color="#71717A" />
                                 </TouchableOpacity>
                               </XStack>
                             </XStack>
                           ))}
-
-                          {/* Form Tambah Opsi ke Grup Ini */}
-                          <YStack gap={8} pt={4} style={{ borderTopWidth: 1, borderTopColor: '#F3F4F6' }}>
-                            <Text fontFamily="Geist_600SemiBold" fontSize={12} color="#71717A">
-                              + Tambah Pilihan Opsi ke "{group.name}":
-                            </Text>
-                            <XStack gap={6}>
-                              <Input
-                                f={2}
-                                placeholder="Nama Pilihan (misal: Tanpa Nasi / Level 1)"
-                                value={activeGroupIndex === idx ? optNameInput : ''}
-                                onChangeText={(val) => {
-                                  setActiveGroupIndex(idx);
-                                  setOptNameInput(val);
-                                }}
-                                backgroundColor="#F4F4F5"
-                                br={8}
-                                fontSize={12}
-                                height={36}
-                              />
-                              <Input
-                                f={1}
-                                placeholder="+Rp (0 jika gratis)"
-                                value={activeGroupIndex === idx ? optPriceInput : ''}
-                                onChangeText={(val) => {
-                                  setActiveGroupIndex(idx);
-                                  setOptPriceInput(formatNumberWithDots(val));
-                                }}
-                                keyboardType="number-pad"
-                                backgroundColor="#F4F4F5"
-                                br={8}
-                                fontSize={12}
-                                height={36}
-                              />
-                              <TouchableOpacity
-                                onPress={() => handleAddOptionToGroup(idx)}
-                                style={{
-                                  backgroundColor: '#18181B',
-                                  paddingHorizontal: 12,
-                                  borderRadius: 8,
-                                  justifyContent: 'center',
-                                  alignItems: 'center',
-                                }}
-                              >
-                                <Ionicons name="add" size={18} color="white" />
-                              </TouchableOpacity>
-                            </XStack>
-                          </YStack>
                         </YStack>
                       ))}
                     </YStack>
@@ -1077,271 +1623,75 @@ export default function AddProductScreen() {
               )}
             </YStack>
 
-            {/* ── TAMPILAN VISUAL & FOTO MENU (OPSIONAL) ── */}
-            <YStack gap={12} backgroundColor="#FAFAFA" p={16} br={14} borderWidth={1} borderColor="#E4E4E7">
-              <YStack gap={2}>
-                <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
-                  Tampilan Visual Menu (Opsional)
-                </Text>
-                <Text fontFamily="Geist_400Regular" fontSize={12} color="#71717A">
-                  Pilih tampilan kartu di kasir: Pakai Ikon Badge ATAU Unggah Foto.
-                </Text>
-              </YStack>
+            {/* ── KETERSEDIAAN DI CABANG / OUTLET ── */}
+            <YStack backgroundColor="#FAFAFA" p={14} br={12} borderWidth={1} borderColor="#E4E4E7" gap={12}>
+              <XStack jc="space-between" ai="center">
+                <YStack f={1} pr={8}>
+                  <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
+                    Ketersediaan Menu di Cabang
+                  </Text>
+                  <Text fontFamily="Geist_400Regular" fontSize={12} color="#71717A">
+                    {isAvailableAllOutlets
+                      ? 'Tersedia di semua cabang resto'
+                      : `Khusus dijual di 1 cabang: ${selectedAvailableOutlet}`}
+                  </Text>
+                </YStack>
 
-              {/* Segmented Switch Tab: Foto Produk (Priority) vs Ikon & Warna (Fallback) */}
-              <XStack backgroundColor="#E4E4E7" p={3} br={10} gap={4}>
-                <TouchableOpacity
-                  onPress={() => setVisualType('image')}
-                  style={{
-                    flex: 1,
-                    paddingVertical: 8,
-                    alignItems: 'center',
-                    borderRadius: 8,
-                    backgroundColor: visualType === 'image' ? 'white' : 'transparent',
+                <Switch
+                  value={isAvailableAllOutlets}
+                  onValueChange={(val) => {
+                    setIsAvailableAllOutlets(val);
+                    if (!val && !selectedAvailableOutlet) {
+                      setSelectedAvailableOutlet(defaultOutletName);
+                    }
                   }}
-                >
-                  <XStack ai="center" gap={6}>
-                    <Ionicons name="camera-outline" size={16} color={visualType === 'image' ? '#FF5722' : '#71717A'} />
-                    <Text fontFamily="Geist_700Bold" fontSize={13} color={visualType === 'image' ? '#FF5722' : '#71717A'}>
-                      Foto Produk (Utama)
-                    </Text>
-                  </XStack>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => setVisualType('icon')}
-                  style={{
-                    flex: 1,
-                    paddingVertical: 8,
-                    alignItems: 'center',
-                    borderRadius: 8,
-                    backgroundColor: visualType === 'icon' ? 'white' : 'transparent',
-                  }}
-                >
-                  <XStack ai="center" gap={6}>
-                    <Ionicons name="color-palette-outline" size={16} color={visualType === 'icon' ? '#FF5722' : '#71717A'} />
-                    <Text fontFamily="Geist_700Bold" fontSize={13} color={visualType === 'icon' ? '#FF5722' : '#71717A'}>
-                      Ikon & Warna
-                    </Text>
-                  </XStack>
-                </TouchableOpacity>
+                  trackColor={{ false: '#E4E4E7', true: '#FFCC80' }}
+                  thumbColor={isAvailableAllOutlets ? '#FF5722' : '#FAFAFA'}
+                />
               </XStack>
 
-              {visualType === 'image' ? (
-                /* OPTION 1 (PRIORITY): IMAGE UPLOAD SELECTOR */
-                <YStack gap={10} pt={4}>
-                  <XStack gap={14} ai="center" p={12} backgroundColor="white" br={12} borderWidth={1} borderColor="#E4E4E7">
-                    <View
-                      style={{
-                        width: 60,
-                        height: 60,
-                        borderRadius: 12,
-                        backgroundColor: imageUri ? 'white' : '#F4F4F5',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        overflow: 'hidden',
-                        borderWidth: 1,
-                        borderColor: '#E4E4E7',
-                      }}
-                    >
-                      {imageUri ? (
-                        <Image source={{ uri: imageUri }} style={{ width: 60, height: 60 }} resizeMode="cover" />
-                      ) : (
-                        <Ionicons name="image-outline" size={28} color="#A1A1AA" />
-                      )}
-                    </View>
-
-                    <YStack f={1} gap={6}>
-                      <Text fontFamily="Geist_700Bold" fontSize={13} color="#18181B">
-                        {imageUri ? 'Foto Produk Terpilih' : 'Unggah Foto Menu Produk'}
-                      </Text>
-                      <XStack gap={8} ai="center">
+              {!isAvailableAllOutlets && (
+                <YStack gap={8} pt={4}>
+                  <Text fontFamily="Geist_600SemiBold" fontSize={12} color="#52525B">
+                    Pilih 1 cabang yang menjual menu ini:
+                  </Text>
+                  <YStack gap={6}>
+                    {allOutlets.map((ot) => {
+                      const isSelected = selectedAvailableOutlet === ot.name;
+                      return (
                         <TouchableOpacity
-                          onPress={() => setPhotoOptionsModalVisible(true)}
+                          key={ot.id}
+                          onPress={() => setSelectedAvailableOutlet(ot.name)}
                           style={{
-                            backgroundColor: '#FF5722',
-                            paddingHorizontal: 12,
-                            paddingVertical: 7,
-                            borderRadius: 8,
                             flexDirection: 'row',
                             alignItems: 'center',
-                            gap: 6,
+                            justifyContent: 'space-between',
+                            backgroundColor: isSelected ? '#FFF7ED' : 'white',
+                            padding: 10,
+                            borderRadius: 8,
+                            borderWidth: 1,
+                            borderColor: isSelected ? '#FF5722' : '#E4E4E7',
                           }}
                         >
-                          <Ionicons name="camera" size={14} color="white" />
-                          <Text fontFamily="Geist_700Bold" fontSize={12} color="white">
-                            {imageUri ? 'Ganti Foto' : 'Unggah Foto'}
-                          </Text>
-                        </TouchableOpacity>
-
-                        {imageUri && (
-                          <TouchableOpacity
-                            onPress={() => setImageUri(null)}
-                            style={{
-                              backgroundColor: '#FEF2F2',
-                              paddingHorizontal: 10,
-                              paddingVertical: 7,
-                              borderRadius: 8,
-                            }}
-                          >
-                            <Text fontFamily="Geist_700Bold" fontSize={12} color="#EF4444">
-                              Hapus Foto
+                          <YStack f={1} pr={8}>
+                            <Text fontFamily="Geist_700Bold" fontSize={13} color={isSelected ? '#EA580C' : '#18181B'}>
+                              {ot.name}
                             </Text>
-                          </TouchableOpacity>
-                        )}
-                      </XStack>
-                    </YStack>
-                  </XStack>
-                </YStack>
-              ) : (
-                /* OPTION 2 (FALLBACK): ICON & COLOR BADGE SELECTOR */
-                <YStack gap={12} pt={4}>
-                  {/* Icon Card Preview */}
-                  <XStack gap={12} ai="center" p={10} backgroundColor="white" br={12} borderWidth={1} borderColor="#E4E4E7">
-                    <View
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 12,
-                        backgroundColor: selectedColor,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Ionicons name={selectedIcon as any} size={24} color="white" />
-                    </View>
-                    <YStack f={1}>
-                      <Text fontFamily="Geist_700Bold" fontSize={13} color="#18181B">
-                        Pratinjau Badge Kasir
-                      </Text>
-                      <Text fontFamily="Geist_500Medium" fontSize={11} color="#71717A">
-                        Tampil warna & ikon di kartu menu kasir.
-                      </Text>
-                    </YStack>
-                  </XStack>
-
-                  {/* Preset Colors (12 Vibrant Palette Options) */}
-                  <YStack gap={6}>
-                    <Text fontFamily="Geist_700Bold" fontSize={12} color="#52525B">
-                      Pilih Warna Accent Badge
-                    </Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                      <XStack gap={10} py={2}>
-                        {[
-                          '#FF5722', // Soodap Orange
-                          '#EF4444', // Merah Pedas
-                          '#F59E0B', // Amber Gold
-                          '#10B981', // Emerald Green
-                          '#14B8A6', // Teal Matcha
-                          '#06B6D4', // Cyan Ice
-                          '#3B82F6', // Ocean Blue
-                          '#6366F1', // Indigo Soda
-                          '#8B5CF6', // Taro Purple
-                          '#EC4899', // Berry Pink
-                          '#D97706', // Caramel Toast
-                          '#475569', // Slate Gray
-                        ].map(color => (
-                          <TouchableOpacity
-                            key={color}
-                            onPress={() => setSelectedColor(color)}
-                            style={{
-                              width: 32,
-                              height: 32,
-                              borderRadius: 16,
-                              backgroundColor: color,
-                              borderWidth: selectedColor === color ? 3 : 0,
-                              borderColor: '#18181B',
-                              justifyContent: 'center',
-                              alignItems: 'center',
-                            }}
-                          >
-                            {selectedColor === color && (
-                              <Ionicons name="checkmark" size={16} color="white" />
-                            )}
-                          </TouchableOpacity>
-                        ))}
-                      </XStack>
-                    </ScrollView>
-                  </YStack>
-
-                  {/* Preset Icons (9 F&B Icon Categories) */}
-                  <YStack gap={6}>
-                    <Text fontFamily="Geist_700Bold" fontSize={12} color="#52525B">
-                      Pilih Ikon Kategori F&B
-                    </Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                      <XStack gap={8}>
-                        {[
-                          { id: 'restaurant-outline', label: 'Makanan' },
-                          { id: 'cafe-outline', label: 'Kopi/Minuman' },
-                          { id: 'pizza-outline', label: 'Snack' },
-                          { id: 'wine-outline', label: 'Jus/Es' },
-                          { id: 'ice-cream-outline', label: 'Dessert' },
-                          { id: 'beer-outline', label: 'Boba/Soda' },
-                          { id: 'flame-outline', label: 'Menu Pedas' },
-                          { id: 'leaf-outline', label: 'Sehat/Veggie' },
-                          { id: 'fish-outline', label: 'Seafood' },
-                        ].map(item => {
-                          const isSel = selectedIcon === item.id;
-                          return (
-                            <TouchableOpacity
-                              key={item.id}
-                              onPress={() => setSelectedIcon(item.id)}
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 6,
-                                paddingHorizontal: 12,
-                                paddingVertical: 8,
-                                borderRadius: 10,
-                                backgroundColor: isSel ? selectedColor : '#FFFFFF',
-                                borderWidth: 1,
-                                borderColor: isSel ? selectedColor : '#E4E4E7',
-                              }}
-                            >
-                              <Ionicons name={item.id as any} size={16} color={isSel ? 'white' : '#52525B'} />
-                              <Text fontFamily="Geist_700Bold" fontSize={12} color={isSel ? 'white' : '#52525B'}>
-                                {item.label}
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </XStack>
-                    </ScrollView>
+                            <Text fontFamily="Geist_400Regular" fontSize={11} color="#71717A">
+                              {ot.address}
+                            </Text>
+                          </YStack>
+                          <Ionicons
+                            name={isSelected ? 'radio-button-on' : 'radio-button-off'}
+                            size={20}
+                            color={isSelected ? '#FF5722' : '#A1A1AA'}
+                          />
+                        </TouchableOpacity>
+                      );
+                    })}
                   </YStack>
                 </YStack>
               )}
-            </YStack>
-
-            {/* Deskripsi Menu (Opsional) */}
-            <YStack gap={8}>
-              <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
-                Deskripsi / Catatan Menu (Publik / Struk)
-              </Text>
-              <TextArea
-                backgroundColor="#FAFAFA"
-                borderWidth={1}
-                borderColor="#D4D4D8"
-                focusStyle={{ borderColor: '#FF5722', backgroundColor: 'white' }}
-                br={10}
-                placeholder="Contoh: Ayam goreng khas Soodap dipadu dengan kremes renyah & sambal bawang pedas."
-                placeholderTextColor="$gray10"
-                color="$gray12"
-                style={{ color: '#18181B' }}
-                textAlignVertical="top"
-                value={description}
-                onChangeText={setDescription}
-                fontFamily="Geist_400Regular"
-                fontSize={13}
-                minHeight={80}
-                maxHeight={220}
-                p={12}
-                onFocus={() => {
-                  setTimeout(() => {
-                    mainScrollViewRef.current?.scrollToEnd({ animated: true });
-                  }, 150);
-                }}
-              />
             </YStack>
 
             {/* Catatan Resep & SOP Dapur (Internal Opsional - Collapsible) */}
@@ -1435,29 +1785,60 @@ export default function AddProductScreen() {
               </YStack>
             )}
 
-            <YStack pb={100} />
-          </YStack>
-        </YStack>
-      </ScrollView>
+            {/* ── TOMBOL HAPUS MENU (HANYA MUNCUL DI EDIT MODE) ── */}
+            {isEditMode && (
+              <Button
+                backgroundColor="#FEE2E2"
+                borderColor="#FECACA"
+                borderWidth={1}
+                br={12}
+                h={48}
+                mt={8}
+                onPress={() => {
+                  showAlert(
+                    'Hapus Menu Ini?',
+                    `Apakah Anda yakin ingin menghapus "${name}"? Tindakan ini tidak dapat dibatalkan.`,
+                    'warning',
+                    () => {
+                      if (params.editId) {
+                        productStore.deleteProduct(params.editId);
+                        router.back();
+                      }
+                    }
+                  );
+                }}
+              >
+                <XStack ai="center" gap={6}>
+                  <Ionicons name="trash-outline" size={18} color="#DC2626" />
+                  <Text fontFamily="Geist_700Bold" color="#DC2626" fontSize={14}>
+                    Hapus Menu Ini
+                  </Text>
+                </XStack>
+              </Button>
+            )}
 
-      {/* ── FIXED BOTTOM ACTION BAR ── */}
-      <XStack
-        backgroundColor="white"
-        px={isMobile ? 14 : 20}
-        py={12}
-        pb={Math.max(insets.bottom + 8, 14)}
-        borderTopWidth={1}
-        borderColor="#E4E4E7"
-        gap={12}
-        shadowColor="rgba(0, 0, 0, 0.08)"
-        shadowRadius={16}
-        shadowOffset={{ width: 0, height: -4 }}
-        elevation={8}
-        ai="center"
-        maxWidth={650}
-        alignSelf="center"
-        w="100%"
-      >
+            <YStack pb={80} />
+          </YStack>
+        </ScrollView>
+
+        {/* ── FIXED BOTTOM ACTION BAR ── */}
+        <XStack
+          backgroundColor="white"
+          px={isMobile ? 16 : 24}
+          py={12}
+          pb={Math.max(insets.bottom + 8, 14)}
+          borderTopWidth={1}
+          borderColor="#F4F4F5"
+          gap={12}
+          shadowColor="rgba(0, 0, 0, 0.05)"
+          shadowRadius={12}
+          shadowOffset={{ width: 0, height: -3 }}
+          elevation={4}
+          ai="center"
+          maxWidth={650}
+          alignSelf="center"
+          w="100%"
+        >
         <Button
           f={1}
           h={48}
@@ -1481,7 +1862,7 @@ export default function AddProductScreen() {
           icon={<Ionicons name="checkmark-circle" size={18} color="white" />}
         >
           <Text fontFamily="Geist_800ExtraBold" color="white" fontSize={14}>
-            Simpan & Publikasikan
+            {isEditMode ? 'Simpan Perubahan' : 'Simpan & Publikasikan'}
           </Text>
         </Button>
       </XStack>
@@ -1490,23 +1871,48 @@ export default function AddProductScreen() {
       <Modal visible={catPickerVisible} transparent animationType="slide" onRequestClose={() => setCatPickerVisible(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setCatPickerVisible(false)} />
-          <View style={{ backgroundColor: 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '60%' }}>
+          <View style={{ backgroundColor: 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '70%', gap: 12 }}>
             <XStack jc="space-between" ai="center" pb={12} borderBottomWidth={1} borderColor="#F4F4F5">
               <Text fontFamily="Geist_800ExtraBold" fontSize={16} color="#18181B">
-                Pilih Kategori Menu
+                Pilih Kategori Menu ({allCategories.length} Kategori)
               </Text>
               <TouchableOpacity onPress={() => setCatPickerVisible(false)}>
                 <Ionicons name="close" size={22} color="#71717A" />
               </TouchableOpacity>
             </XStack>
 
-            <ScrollView py={10}>
+            <TouchableOpacity
+              onPress={() => {
+                setCatPickerVisible(false);
+                setNewCatModalVisible(true);
+              }}
+              style={{
+                paddingVertical: 12,
+                paddingHorizontal: 14,
+                borderRadius: 10,
+                backgroundColor: '#FFF3E0',
+                borderWidth: 1,
+                borderColor: '#FF5722',
+                borderStyle: 'dashed',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+              }}
+            >
+              <Ionicons name="add-circle" size={18} color="#FF5722" />
+              <Text fontFamily="Geist_700Bold" fontSize={13} color="#FF5722">
+                + Tambah Kategori Baru
+              </Text>
+            </TouchableOpacity>
+
+            <ScrollView py={4}>
               <YStack gap={8}>
-                {categories.map(cat => (
+                {allCategories.map(cat => (
                   <TouchableOpacity
                     key={cat}
                     onPress={() => {
-                      setCategory(cat);
+                      handleSelectCategory(cat);
                       setCatPickerVisible(false);
                     }}
                     style={{
@@ -1543,12 +1949,12 @@ export default function AddProductScreen() {
                 <Text fontFamily="Geist_800ExtraBold" fontSize={16} color="#18181B">
                   Hitung Modal & Bahan Baku per Porsi
                 </Text>
-                
+
                 <XStack ai="center" gap={10} flexWrap="wrap">
                   <Text fontFamily="Geist_400Regular" fontSize={11} color="#71717A">
                     Rincian modal resep & kemasan
                   </Text>
-                  
+
                   <TouchableOpacity
                     onPress={() => setShowHelpTip(!showHelpTip)}
                     style={{
@@ -1634,7 +2040,7 @@ export default function AddProductScreen() {
                     backgroundColor="white"
                     borderColor="#E4E4E7"
                     br={10}
-                    placeholder="Contoh: 4.500"
+                    placeholder="4.500"
                     placeholderTextColor="$gray10"
                     color="$gray12"
                     style={{ color: '#18181B' }}
@@ -1755,13 +2161,28 @@ export default function AddProductScreen() {
         </View>
       </Modal>
 
-      {/* ── PHOTO SOURCE SELECTION MODAL ── */}
+      {/* ── PHOTO SOURCE SELECTION MODAL (TANPA OVERLAY HITAM) ── */}
       <Modal visible={photoOptionsModalVisible} transparent animationType="slide" onRequestClose={() => setPhotoOptionsModalVisible(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+        <View style={{ flex: 1, backgroundColor: 'transparent', justifyContent: 'flex-end' }}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setPhotoOptionsModalVisible(false)} />
-          <View style={{ backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, gap: 16 }}>
-            <XStack jc="space-between" ai="center">
-              <Text fontFamily="Geist_800ExtraBold" fontSize={18} color="#18181B">
+          <View
+            style={{
+              backgroundColor: 'white',
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: 20,
+              gap: 14,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -4 },
+              shadowOpacity: 0.12,
+              shadowRadius: 16,
+              elevation: 16,
+              borderTopWidth: 1,
+              borderColor: '#F4F4F5',
+            }}
+          >
+            <XStack jc="space-between" ai="center" pb={4}>
+              <Text fontFamily="Geist_800ExtraBold" fontSize={16} color="#18181B">
                 Pilih Sumber Foto Menu
               </Text>
               <TouchableOpacity onPress={() => setPhotoOptionsModalVisible(false)}>
@@ -1769,23 +2190,29 @@ export default function AddProductScreen() {
               </TouchableOpacity>
             </XStack>
 
-            <YStack gap={12}>
+            <YStack gap={10}>
               <TouchableOpacity
                 onPress={handleTakePicture}
                 activeOpacity={0.7}
                 style={{
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: '#FAFAFA',
                   borderWidth: 1,
                   borderColor: '#E4E4E7',
-                  borderRadius: 14,
-                  padding: 16,
+                  borderRadius: 12,
+                  padding: 14,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
                 }}
               >
-                <YStack gap={4}>
-                  <Text fontFamily="Geist_800ExtraBold" fontSize={15} color="#18181B">
+                <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#FFF3E0', justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="camera" size={20} color="#FF5722" />
+                </View>
+                <YStack f={1} gap={2}>
+                  <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
                     Ambil Foto Baru (Kamera)
                   </Text>
-                  <Text fontFamily="Geist_400Regular" fontSize={12} color="#71717A">
+                  <Text fontFamily="Geist_400Regular" fontSize={11} color="#71717A">
                     Jepret langsung foto makanan/minuman dengan Kamera HP
                   </Text>
                 </YStack>
@@ -1795,27 +2222,130 @@ export default function AddProductScreen() {
                 onPress={handlePickFromGallery}
                 activeOpacity={0.7}
                 style={{
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: '#FAFAFA',
                   borderWidth: 1,
                   borderColor: '#E4E4E7',
-                  borderRadius: 14,
-                  padding: 16,
+                  borderRadius: 12,
+                  padding: 14,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
                 }}
               >
-                <YStack gap={4}>
-                  <Text fontFamily="Geist_800ExtraBold" fontSize={15} color="#18181B">
+                <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#EFF6FF', justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="image" size={20} color="#3B82F6" />
+                </View>
+                <YStack f={1} gap={2}>
+                  <Text fontFamily="Geist_700Bold" fontSize={14} color="#18181B">
                     Pilih Foto dari Galeri HP
                   </Text>
-                  <Text fontFamily="Geist_400Regular" fontSize={12} color="#71717A">
+                  <Text fontFamily="Geist_400Regular" fontSize={11} color="#71717A">
                     Pilih gambar dari album / galeri perangkat Anda
                   </Text>
                 </YStack>
               </TouchableOpacity>
             </YStack>
 
-            <Button br={12} backgroundColor="#F4F4F5" onPress={() => setPhotoOptionsModalVisible(false)}>
-              <Text fontFamily="Geist_700Bold" color="#71717A" fontSize={14}>
+            <Button br={10} h={44} backgroundColor="#F4F4F5" onPress={() => setPhotoOptionsModalVisible(false)}>
+              <Text fontFamily="Geist_700Bold" color="#71717A" fontSize={13}>
                 Batal
+              </Text>
+            </Button>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── AI DESCRIPTION SUGGESTIONS MODAL ── */}
+      <Modal visible={aiModalVisible} transparent animationType="slide" onRequestClose={() => setAiModalVisible(false)}>
+        <View style={{ flex: 1, backgroundColor: 'transparent', justifyContent: 'flex-end' }}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setAiModalVisible(false)} />
+          <View
+            style={{
+              backgroundColor: 'white',
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: 20,
+              gap: 14,
+              maxHeight: '75%',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -4 },
+              shadowOpacity: 0.12,
+              shadowRadius: 16,
+              elevation: 16,
+              borderTopWidth: 1,
+              borderColor: '#F4F4F5',
+            }}
+          >
+            <XStack jc="space-between" ai="center" pb={4}>
+              <XStack ai="center" gap={6}>
+                <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#FFF7ED', justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="sparkles" size={16} color="#EA580C" />
+                </View>
+                <Text fontFamily="Geist_800ExtraBold" fontSize={16} color="#18181B">
+                  Saran Deskripsi AI
+                </Text>
+              </XStack>
+              <TouchableOpacity onPress={() => setAiModalVisible(false)}>
+                <Ionicons name="close" size={22} color="#71717A" />
+              </TouchableOpacity>
+            </XStack>
+
+            <Text fontFamily="Geist_400Regular" fontSize={12} color="#71717A">
+              Pilih salah satu deskripsi kuliner untuk "{name}" ({category}):
+            </Text>
+
+            {isGeneratingAi ? (
+              <YStack py={30} ai="center" jc="center" gap={10}>
+                <ActivityIndicator size="small" color="#FF5722" />
+                <Text fontFamily="Geist_600SemiBold" fontSize={13} color="#71717A">
+                  Meracik kata-kata menggugah selera...
+                </Text>
+              </YStack>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <YStack gap={10} py={4}>
+                  {aiSuggestions.map((sug, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      onPress={() => {
+                        setDescription(sug);
+                        setAiModalVisible(false);
+                      }}
+                      activeOpacity={0.7}
+                      style={{
+                        backgroundColor: '#FAFAFA',
+                        borderWidth: 1,
+                        borderColor: '#E4E4E7',
+                        borderRadius: 12,
+                        padding: 14,
+                        gap: 8,
+                      }}
+                    >
+                      <XStack jc="space-between" ai="center">
+                        <View style={{ backgroundColor: '#FFF7ED', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                          <Text fontFamily="Geist_700Bold" fontSize={10} color="#EA580C">
+                            Opsi #{idx + 1}
+                          </Text>
+                        </View>
+                        <XStack ai="center" gap={4}>
+                          <Text fontFamily="Geist_700Bold" fontSize={11} color="#FF5722">
+                            Gunakan Teks Ini
+                          </Text>
+                          <Ionicons name="checkmark-circle-outline" size={14} color="#FF5722" />
+                        </XStack>
+                      </XStack>
+                      <Text fontFamily="Geist_400Regular" fontSize={13} color="#18181B" lineHeight={18}>
+                        "{sug}"
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </YStack>
+              </ScrollView>
+            )}
+
+            <Button br={10} h={44} backgroundColor="#F4F4F5" onPress={() => setAiModalVisible(false)}>
+              <Text fontFamily="Geist_700Bold" color="#71717A" fontSize={13}>
+                Tutup
               </Text>
             </Button>
           </View>

@@ -1,0 +1,2444 @@
+{
+  "tldrawFileFormatVersion": 1,
+  "schema": {
+    "schemaVersion": 2,
+    "sequences": {
+      "com.tldraw.store": 5,
+      "com.tldraw.asset": 1,
+      "com.tldraw.camera": 1,
+      "com.tldraw.document": 2,
+      "com.tldraw.instance": 26,
+      "com.tldraw.instance_page_state": 5,
+      "com.tldraw.page": 1,
+      "com.tldraw.instance_presence": 6,
+      "com.tldraw.pointer": 1,
+      "com.tldraw.shape": 4,
+      "com.tldraw.user": 1,
+      "com.tldraw.asset.image": 6,
+      "com.tldraw.asset.video": 5,
+      "com.tldraw.asset.bookmark": 2,
+      "com.tldraw.shape.group": 0,
+      "com.tldraw.shape.text": 4,
+      "com.tldraw.shape.bookmark": 2,
+      "com.tldraw.shape.draw": 5,
+      "com.tldraw.shape.geo": 11,
+      "com.tldraw.shape.note": 13,
+      "com.tldraw.shape.line": 5,
+      "com.tldraw.shape.frame": 1,
+      "com.tldraw.shape.arrow": 8,
+      "com.tldraw.shape.highlight": 4,
+      "com.tldraw.shape.embed": 4,
+      "com.tldraw.shape.image": 5,
+      "com.tldraw.shape.video": 4,
+      "com.tldraw.binding.arrow": 1
+    }
+  },
+  "records": [
+    {
+      "gridSize": 10,
+      "name": "",
+      "meta": {},
+      "id": "document:document",
+      "typeName": "document"
+    },
+    {
+      "id": "page:page",
+      "name": "Page 1",
+      "index": "a1",
+      "typeName": "page",
+      "meta": {}
+    },
+    {
+      "id": "shape:geo_1",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 50,
+      "y": 50,
+      "rotation": 0,
+      "index": "a0001",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 2585,
+        "h": 230,
+        "geo": "rectangle",
+        "color": "black",
+        "labelColor": "black",
+        "fill": "semi",
+        "dash": "solid",
+        "size": "m",
+        "font": "sans",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🍽️ SOODAP RESTAURANT MANAGEMENT SYSTEM - MASTER ROADMAP & TO-DO LIST"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Platform POS & Ekosistem Restoran Lengkap: Front of House, Dapur (KDS), Inventori BOM, Kasir, Keuangan & Multi-Cabang"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Status Legenda:"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟩 [READY / POLISH] Sudah ada di codebase & siap difinalisasi"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟨 [IN PROGRESS] Prioritas pengerjaan saat ini"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟦 [TO DO / NEXT PHASE] Fitur krusial tahap berikutnya"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟪 [ADVANCED SCALING] Skalabilitas Multi-Cabang, Hardware & AI"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_2",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 50,
+      "y": 310,
+      "rotation": 0,
+      "index": "a0002",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 75,
+        "geo": "rectangle",
+        "color": "blue",
+        "labelColor": "black",
+        "fill": "semi",
+        "dash": "solid",
+        "size": "s",
+        "font": "sans",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🛒 1. POS & FRONT OF HOUSE"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Kasir Cepat & Manajemen Meja"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_3",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 50,
+      "y": 405,
+      "rotation": 0,
+      "index": "a0003",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "green",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟩 [READY] Katalog Menu & Dynamic Modifiers"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Katalog visual cepat, varian ukuran/rasa, add-on berbayar (+Extra Shot, +Topping), custom notes level pedas/gula."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_4",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 50,
+      "y": 580,
+      "rotation": 0,
+      "index": "a0004",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "yellow",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟨 [IN PROGRESS] Visual Table Management"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Denah tata letak meja visual. Indikator status meja (Kosong/Makan/Billing). Fitur Pindah Meja & Gabung Meja."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_5",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 50,
+      "y": 755,
+      "rotation": 0,
+      "index": "a0005",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "yellow",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟨 [IN PROGRESS] Hold Order & Split Bill"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Simpan pesanan gantung (Draft Order). Split bill per item makanan atau split bill bagi rata antar tamu."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_6",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 50,
+      "y": 930,
+      "rotation": 0,
+      "index": "a0006",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "green",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟩 [READY] Pajak Restoran (PB1) & Service Fee"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Perhitungan otomatis PB1 10% dan Service Fee yang dapat diaktifkan/dinonaktifkan per outlet."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_7",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 50,
+      "y": 1105,
+      "rotation": 0,
+      "index": "a0007",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "green",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟩 [READY] Fast Order & Customer Picker"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "1-click add to cart, pencarian kilat, filter kategori dinamis, dan selector pelanggan (Walk-in / Member)."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_8",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 485,
+      "y": 310,
+      "rotation": 0,
+      "index": "a0008",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 75,
+        "geo": "rectangle",
+        "color": "orange",
+        "labelColor": "black",
+        "fill": "semi",
+        "dash": "solid",
+        "size": "s",
+        "font": "sans",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🍳 2. KITCHEN DISPLAY (KDS)"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Alur Dapur & Routing Stasiun"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_9",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 485,
+      "y": 405,
+      "rotation": 0,
+      "index": "a0009",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "green",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟩 [READY] Interactive Kitchen Display (KDS)"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Antrean pesanan dapur realtime dengan live timer durasi tunggu. Alert peringatan warna (>15m kuning, >30m merah)."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_10",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 485,
+      "y": 580,
+      "rotation": 0,
+      "index": "a0010",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "yellow",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟨 [IN PROGRESS] Multi-Station Order Routing"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Auto-routing pesanan ke stasiun spesifik: Minuman ke Barista/Bar, Makanan ke Dapur Utama, Snack ke Dessert."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_11",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 485,
+      "y": 755,
+      "rotation": 0,
+      "index": "a0011",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "green",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟩 [READY] Status Tiket Masak Interaktif"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Alur 4 tahap jelas: Menunggu -> Sedang Dimasak -> Siap Saji (Ready) -> Selesai Diantar ke Meja."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_12",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 485,
+      "y": 930,
+      "rotation": 0,
+      "index": "a0012",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "blue",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟦 [TO DO] Thermal Kitchen Ticket Printer"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Auto-print tiket order dapur format ringkas via thermal printer LAN / Bluetooth khusus dapur."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_13",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 485,
+      "y": 1105,
+      "rotation": 0,
+      "index": "a0013",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "blue",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟦 [TO DO] Audio Alert Bell Notification"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Suara lonceng/chime otomatis setiap kali ada pesanan baru masuk agar koki langsung sigap."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_14",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 920,
+      "y": 310,
+      "rotation": 0,
+      "index": "a0014",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 75,
+        "geo": "rectangle",
+        "color": "green",
+        "labelColor": "black",
+        "fill": "semi",
+        "dash": "solid",
+        "size": "s",
+        "font": "sans",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "📦 3. INVENTORY & RESEP BOM"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Bahan Baku & Auto Potong Stok"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_15",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 920,
+      "y": 405,
+      "rotation": 0,
+      "index": "a0015",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "green",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟩 [READY] Resep / Bill of Materials (BOM)"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Formula komposisi bahan per menu (misal: 1 Latte = 18g Kopi + 150ml Susu + 1 Cup). Auto-cut stok bahan saat terjual."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_16",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 920,
+      "y": 580,
+      "rotation": 0,
+      "index": "a0016",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "yellow",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟨 [IN PROGRESS] Master Bahan Mentah & Unit"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Database bahan baku dengan unit satuan (Gram, Kg, Ml, Liter, Pcs, Dus) + Notifikasi stok menipis (Minimum Alert)."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_17",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 920,
+      "y": 755,
+      "rotation": 0,
+      "index": "a0017",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "blue",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟦 [TO DO] Purchase Order & Restock"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Pencatatan stok masuk dari supplier beserta harga beli terakhir untuk kalkulasi HPP otomatis (FIFO / Avg Cost)."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_18",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 920,
+      "y": 930,
+      "rotation": 0,
+      "index": "a0018",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "blue",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟦 [TO DO] Waste & Spoilage Log"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Pencatatan bahan kedaluwarsa, tumpah, atau rusak untuk transparansi selisih biaya modal dapur."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_19",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 920,
+      "y": 1105,
+      "rotation": 0,
+      "index": "a0019",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "blue",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟦 [TO DO] Stock Opname Module"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Form penghitungan fisik periodik (harian/mingguan) vs data sistem beserta laporan selisih kehilangan."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_20",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 1355,
+      "y": 310,
+      "rotation": 0,
+      "index": "a0020",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 75,
+        "geo": "rectangle",
+        "color": "red",
+        "labelColor": "black",
+        "fill": "semi",
+        "dash": "solid",
+        "size": "s",
+        "font": "sans",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "💵 4. PEMBAYARAN & KASIR"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Multi-Payment & Cash Drawer"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_21",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 1355,
+      "y": 405,
+      "rotation": 0,
+      "index": "a0021",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "green",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟩 [READY] Multi-Payment Gateway"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Tunai (auto kembalian & saran uang pas), QRIS Dinamis/Statis, EDC Debit/Kredit, Transfer Bank, E-Wallet."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_22",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 1355,
+      "y": 580,
+      "rotation": 0,
+      "index": "a0022",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "green",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟩 [READY] Split Payment (Multi-Method)"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Pembayaran 1 tagihan dengan 2 metode sekaligus (misal: Rp 50.000 Tunai + Rp 35.000 QRIS)."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_23",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 1355,
+      "y": 755,
+      "rotation": 0,
+      "index": "a0023",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "yellow",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟨 [IN PROGRESS] Shift Kasir & Cash Reconciliation"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Opening modal awal kasir, Cash In/Out operasional, dan Closing Shift Z-Report (Uang Fisik vs Sistem)."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_24",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 1355,
+      "y": 930,
+      "rotation": 0,
+      "index": "a0024",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "green",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟩 [READY] Struk Thermal & Digital Receipt"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Cetak struk Bluetooth Thermal 58mm/80mm + opsi kirim struk digital tanpa kertas via WhatsApp & Email."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_25",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 1355,
+      "y": 1105,
+      "rotation": 0,
+      "index": "a0025",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "green",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟩 [READY] Manager PIN Void & Refund"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Pembatalan transaksi atau diskon khusus wajib menggunakan otorisasi PIN Manajer untuk mencegah fraud."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_26",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 1790,
+      "y": 310,
+      "rotation": 0,
+      "index": "a0026",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 75,
+        "geo": "rectangle",
+        "color": "violet",
+        "labelColor": "black",
+        "fill": "semi",
+        "dash": "solid",
+        "size": "s",
+        "font": "sans",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "👥 5. KARYAWAN & EXPENSE AI"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Presensi Selfie & Beban Biaya"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_27",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 1790,
+      "y": 405,
+      "rotation": 0,
+      "index": "a0027",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "green",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟩 [READY] Role-Based Access Control (RBAC)"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Level hak akses: Owner (Full), Manager (Stok/Void), Kasir (Order/Bayar), Kitchen/Barista (Hanya KDS)."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_28",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 1790,
+      "y": 580,
+      "rotation": 0,
+      "index": "a0028",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "green",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟩 [READY] Presensi Selfie & Geotag Clock-In"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Absensi masuk/pulang dengan kamera selfie real-time dan catatan waktu akurat untuk cegah titip absen."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_29",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 1790,
+      "y": 755,
+      "rotation": 0,
+      "index": "a0029",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "green",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟩 [READY] Expense Tracker Restoran"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Catat beban operasional harian: Belanja pasar, Listrik, Sewa, Gaji harian, Perawatan alat dapur."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_30",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 1790,
+      "y": 930,
+      "rotation": 0,
+      "index": "a0030",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "green",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟩 [READY] AI OCR Receipt Scanner"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Foto struk belanja pasar/supermarket, AI otomatis membaca total belanja dan nama-nama barang."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_31",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 1790,
+      "y": 1105,
+      "rotation": 0,
+      "index": "a0031",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "blue",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟦 [TO DO] Laporan Laba Rugi & Export"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Kalkulasi Laba Bersih = Omset - HPP - Beban Operasional. Ekspor laporan ke Excel/CSV & PDF akuntansi."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_32",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 2225,
+      "y": 310,
+      "rotation": 0,
+      "index": "a0032",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 75,
+        "geo": "rectangle",
+        "color": "light-blue",
+        "labelColor": "black",
+        "fill": "semi",
+        "dash": "solid",
+        "size": "s",
+        "font": "sans",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🌐 6. MULTI-OUTLET & OFFLINE"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Infrastruktur & Skalabilitas"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_33",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 2225,
+      "y": 405,
+      "rotation": 0,
+      "index": "a0033",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "green",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟩 [READY] 100% Offline-First Architecture"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Aplikasi beroperasi normal tanpa internet (WatermelonDB / Local SQLite). Kasir tetap lancar jualan."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_34",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 2225,
+      "y": 580,
+      "rotation": 0,
+      "index": "a0034",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "green",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟩 [READY] Realtime Cloud Sync Supabase"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Sinkronisasi otomatis di latar belakang begitu internet terhubung kembali tanpa mengganggu kasir."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_35",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 2225,
+      "y": 755,
+      "rotation": 0,
+      "index": "a0035",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "green",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟩 [READY] Multi-Outlet / Cabang Switcher"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "1 akun Owner dapat memantau dan berpindah antar cabang restoran (Cabang 1, Cabang 2, Foodcourt)."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_36",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 2225,
+      "y": 930,
+      "rotation": 0,
+      "index": "a0036",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "violet",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟪 [ADVANCED] Local LAN P2P Sync"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "HP Waiter <-> Tablet Kasir <-> Layar Dapur tersinkronisasi via Wi-Fi lokal router tanpa butuh kuota internet."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:geo_37",
+      "typeName": "shape",
+      "type": "geo",
+      "x": 2225,
+      "y": 1105,
+      "rotation": 0,
+      "index": "a0037",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "w": 410,
+        "h": 160,
+        "geo": "rectangle",
+        "color": "violet",
+        "labelColor": "black",
+        "fill": "none",
+        "dash": "solid",
+        "size": "s",
+        "font": "draw",
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🟪 [ADVANCED] Loyalty Member & WhatsApp Promo"
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Sistem poin belanja member, reward voucher, dan pesan promosi otomatis ke nomor WhatsApp pelanggan."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:note_38",
+      "typeName": "shape",
+      "type": "note",
+      "x": 50,
+      "y": 1290,
+      "rotation": 0,
+      "index": "a0038",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "color": "yellow",
+        "labelColor": "black",
+        "size": "s",
+        "font": "draw",
+        "fontSizeAdjustment": 0,
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "textLastEditedBy": null,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "💡 MASUKAN DESAIN POS:"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "• Tablet Kasir (Landscape): Gunakan Split-View (Katalog Menu 60% di kiri, Keranjang & Billing 40% di kanan)."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "• HP Waiter (Portrait): Mode pemesanan cepat per nomor meja dengan tombol 'Kirim ke Dapur' mengambang (Floating Action Button)."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:note_39",
+      "typeName": "shape",
+      "type": "note",
+      "x": 485,
+      "y": 1290,
+      "rotation": 0,
+      "index": "a0039",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "color": "orange",
+        "labelColor": "black",
+        "size": "s",
+        "font": "draw",
+        "fontSizeAdjustment": 0,
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "textLastEditedBy": null,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🚀 MASUKAN ARSITEKTUR DAPUR:"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "• Layar KDS Dapur wajib ada tombol 'BUMP' sekali sentuh untuk menyelesaikan pesanan."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "• Pasang sound chime nada tinggi agar terdengar di lingkungan dapur yang bising saat ada order baru masuk."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:note_40",
+      "typeName": "shape",
+      "type": "note",
+      "x": 920,
+      "y": 1290,
+      "rotation": 0,
+      "index": "a0040",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "color": "green",
+        "labelColor": "black",
+        "size": "s",
+        "font": "draw",
+        "fontSizeAdjustment": 0,
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "textLastEditedBy": null,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "📊 MASUKAN INVENTORY & HPP:"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "• Integrasi BOM sangat krusial: Jika stok bahan baku habis di sistem, otomatis beri label 'HABIS' di menu kasir agar kasir tidak salah jual."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "• Buat sistem satuan bertingkat (Contoh: 1 Box = 12 Botol = 12.000 ml) agar mudah input restock belanjaan."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:note_41",
+      "typeName": "shape",
+      "type": "note",
+      "x": 1355,
+      "y": 1290,
+      "rotation": 0,
+      "index": "a0041",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "color": "red",
+        "labelColor": "black",
+        "size": "s",
+        "font": "draw",
+        "fontSizeAdjustment": 0,
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "textLastEditedBy": null,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🛡️ MASUKAN KEAMANAN & ANTI-FRAUD:"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "• Kunci laci kasir (Cash Drawer) hanya terbuka saat ada transaksi tunai atau dengan input PIN Manajer."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "• Catat riwayat setiap Void / Pembatalan transaksi beserta alasan pembatalan untuk audit harian Owner."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:note_42",
+      "typeName": "shape",
+      "type": "note",
+      "x": 1790,
+      "y": 1290,
+      "rotation": 0,
+      "index": "a0042",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "color": "violet",
+        "labelColor": "black",
+        "size": "s",
+        "font": "draw",
+        "fontSizeAdjustment": 0,
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "textLastEditedBy": null,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "📈 MASUKAN EKSEKUTIF UNTUK OWNER:"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "• Dashboard Ringkasan Penjualan di HP Owner: Grafik Jam Ramai (Peak Hours), 5 Menu Paling Laris (Top Sellers), dan Perkiraan Profit Harian Realtime."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shape:note_43",
+      "typeName": "shape",
+      "type": "note",
+      "x": 2225,
+      "y": 1290,
+      "rotation": 0,
+      "index": "a0043",
+      "parentId": "page:page",
+      "isLocked": false,
+      "opacity": 1,
+      "meta": {},
+      "props": {
+        "color": "light-blue",
+        "labelColor": "black",
+        "size": "s",
+        "font": "draw",
+        "fontSizeAdjustment": 0,
+        "align": "start",
+        "verticalAlign": "start",
+        "growY": 0,
+        "url": "",
+        "scale": 1,
+        "textLastEditedBy": null,
+        "richText": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "🌐 MASUKAN OFFLINE-FIRST:"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "• Kasir restoran di Indonesia sering menghadapi Wi-Fi mati/lemot. Arsitektur offline WatermelonDB yang sudah ada harus dipertahankan sebagai benteng utama."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

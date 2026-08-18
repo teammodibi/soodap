@@ -1,7 +1,9 @@
 import { loadFromLocal, saveToLocal, addToSyncQueue, KEYS } from './offlineDb';
+import { getActiveSession } from './session';
 
 export interface TransactionItem {
   id: string;
+  storeName?: string;
   orderType: 'Dine In' | 'Takeaway' | 'Delivery';
   customerName: string;
   customerPhone?: string;
@@ -45,11 +47,14 @@ export const transactionStore = {
     };
   },
   addTransaction: (trx: Omit<TransactionItem, 'id' | 'timestamp'>) => {
+    const session = getActiveSession();
+    const storeName = trx.storeName || session?.storeName || 'Ayam Kelawas';
     const now = new Date();
     const dateStr = now.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
     const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     const created: TransactionItem = {
       ...trx,
+      storeName,
       id: `NOTA-${Math.floor(100000 + Math.random() * 900000)}`,
       timestamp: `${dateStr}, ${timeStr}`,
     };

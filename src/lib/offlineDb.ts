@@ -78,7 +78,7 @@ export function saveToLocal<T>(key: string, data: T): void {
 // ── SYNC QUEUE MANAGEMENT FOR OFFLINE-TO-SUPABASE ──
 export interface PendingSyncItem {
   id: string;
-  table: 'transactions' | 'products' | 'expenses' | 'outlets';
+  table: 'transactions' | 'products' | 'categories' | 'discounts' | 'expenses' | 'outlets';
   action: 'insert' | 'update' | 'delete';
   payload: any;
   createdAt: string;
@@ -124,17 +124,19 @@ export async function triggerSyncToSupabase(): Promise<{ syncedCount: number; re
         });
 
         if (error) {
-          console.warn('[SyncEngine] Supabase insert transaction error (will retry when online):', error.message);
+          console.warn('[SyncEngine] Supabase insert transaction notice:', error.message);
           remainingQueue.push(item);
         } else {
           syncedCount++;
         }
       } else if (item.table === 'products') {
         if (item.action === 'insert' || item.action === 'update') {
+          const storeName = item.payload.storeName || session?.storeName || 'Outlet Resto Utama';
+          const userId = item.payload.userId || session?.userId || 'owner-1';
           const { error } = await supabase.from('products').upsert({
             id: item.payload.id,
-            user_id: session?.userId || 'owner-1',
-            store_name: session?.storeName || 'Soodap Resto',
+            user_id: userId,
+            store_name: storeName,
             name: item.payload.name,
             category: item.payload.category,
             selling_price: item.payload.sellingPrice,
@@ -149,13 +151,15 @@ export async function triggerSyncToSupabase(): Promise<{ syncedCount: number; re
             has_variants: item.payload.hasVariants || false,
             variants: item.payload.variants ? JSON.stringify(item.payload.variants) : null,
             modifier_groups: item.payload.modifierGroups ? JSON.stringify(item.payload.modifierGroups) : null,
+            available_outlets: item.payload.availableOutlets ? JSON.stringify(item.payload.availableOutlets) : null,
+            hidden_outlets: item.payload.hiddenOutlets ? JSON.stringify(item.payload.hiddenOutlets) : null,
             updated_at: new Date().toISOString(),
           });
 
           if (error) {
             console.warn('[SyncEngine] Supabase insert/update product notice:', error.message);
-            // Non-fatal, offline queue retains local state
-            syncedCount++;
+            // If offline/table not ready, retain in queue if needed
+            remainingQueue.push(item);
           } else {
             syncedCount++;
           }
@@ -163,13 +167,117 @@ export async function triggerSyncToSupabase(): Promise<{ syncedCount: number; re
           const { error } = await supabase.from('products').delete().eq('id', item.payload.id);
           if (error) {
             console.warn('[SyncEngine] Supabase delete product notice:', error.message);
+            remainingQueue.push(item);
+          } else {
             syncedCount++;
+          }
+        }
+      } else if (item.table === 'categories') {
+        if (item.action === 'insert' || item.action === 'update') {
+          const userId = item.payload.userId || session?.userId || 'owner-1';
+          const storeName = item.payload.storeName || session?.storeName || 'Outlet Resto Utama';
+          const catId = `${userId}_${item.payload.name}`;
+          
+          const payload: any = {
+            id: catId,
+            user_id: userId,
+            store_name: storeName,
+            name: item.payload.name,
+            sort_order: item.payload.sortOrder ?? 0,
+            updated_at: new Date().toISOString(),
+          };
+
+          let { error } = await supabase.from('categories').upsert(payload);
+
+          // Graceful fallback if sort_order column does not exist yet on Supabase PostgREST schema cache
+          if (error && (error.message.includes('sort_order') || error.code === 'PGRST204')) {
+            delete payload.sort_order;
+            const retry = await supabase.from('categories').upsert(payload);
+            error = retry.error;
+          }
+
+          if (error) {
+            console.warn('[SyncEngine] Supabase upsert category notice:', error.message);
+            remainingQueue.push(item);
+          } else {
+            syncedCount++;
+          }
+        } else if (item.action === 'delete') {
+          const { error } = await supabase.from('categories').delete().match({
+            name: item.payload.name,
+            user_id: session?.userId || 'owner-1',
+          });
+
+          if (error) {
+            console.warn('[SyncEngine] Supabase delete category notice:', error.message);
+            remainingQueue.push(item);
+          } else {
+            syncedCount++;
+          }
+        }
+      } else if (item.table === 'discounts') {
+        if (item.action === 'insert' || item.action === 'update') {
+          const userId = item.payload.userId || session?.userId || 'owner-1';
+          const storeName = item.payload.storeName || session?.storeName || 'Outlet Resto Utama';
+          const payload: any = {
+            id: item.payload.id,
+            user_id: userId,
+            store_name: storeName,
+            code: item.payload.code,
+            name: item.payload.name,
+            scope: item.payload.scope || 'global_coupon',
+            type: item.payload.type || 'percentage',
+            value: item.payload.value || 0,
+            min_purchase: item.payload.minPurchase || 0,
+            max_discount: item.payload.maxDiscount || 0,
+            applied_product_ids: item.payload.appliedProductIds ? JSON.stringify(item.payload.appliedProductIds) : null,
+            description: item.payload.description || '',
+            is_active: item.payload.isActive ?? true,
+            updated_at: new Date().toISOString(),
+          };
+
+          const { error } = await supabase.from('discounts').upsert(payload);
+          if (error) {
+            console.warn('[SyncEngine] Supabase upsert discount notice:', error.message);
+            remainingQueue.push(item);
+          } else {
+            syncedCount++;
+          }
+        } else if (item.action === 'delete') {
+          const { error } = await supabase.from('discounts').delete().eq('id', item.payload.id);
+          if (error) {
+            console.warn('[SyncEngine] Supabase delete discount notice:', error.message);
+            remainingQueue.push(item);
+          } else {
+            syncedCount++;
+          }
+        }
+      } else if (item.table === 'outlets') {
+        if (item.action === 'insert' || item.action === 'update') {
+          const { error } = await supabase.from('outlets').upsert({
+            id: item.payload.id,
+            user_id: item.payload.userId || session?.userId || 'owner-1',
+            name: item.payload.name,
+            address: item.payload.address || '',
+            phone: item.payload.phone || '',
+            updated_at: new Date().toISOString(),
+          });
+          if (error) {
+            console.warn('[SyncEngine] Supabase upsert outlet notice:', error.message);
+            remainingQueue.push(item);
+          } else {
+            syncedCount++;
+          }
+        } else if (item.action === 'delete') {
+          const { error } = await supabase.from('outlets').delete().eq('id', item.payload.id);
+          if (error) {
+            console.warn('[SyncEngine] Supabase delete outlet notice:', error.message);
+            remainingQueue.push(item);
           } else {
             syncedCount++;
           }
         }
       } else {
-        // For other local actions when Supabase tables are ready
         syncedCount++;
       }
     } catch (e) {
@@ -180,6 +288,80 @@ export async function triggerSyncToSupabase(): Promise<{ syncedCount: number; re
 
   saveToLocal(KEYS.SYNC_QUEUE, remainingQueue);
   return { syncedCount, remainingCount: remainingQueue.length };
+}
+
+// ── PULL DATA FROM SUPABASE TO LOCAL ──
+export async function pullRemoteCatalog(): Promise<{ products: any[]; categories: string[]; discounts: any[] } | null> {
+  try {
+    const session = getActiveSession();
+    const userId = session?.userId;
+
+    const [prodRes, catRes, discRes] = await Promise.all([
+      userId
+        ? supabase.from('products').select('*').eq('user_id', userId)
+        : supabase.from('products').select('*'),
+      userId
+        ? supabase.from('categories').select('*').eq('user_id', userId)
+        : supabase.from('categories').select('*'),
+      userId
+        ? supabase.from('discounts').select('*').eq('user_id', userId)
+        : supabase.from('discounts').select('*'),
+    ]);
+
+    let remoteProducts: any[] = [];
+    let remoteCategories: string[] = [];
+    let remoteDiscounts: any[] = [];
+
+    if (prodRes.data && prodRes.data.length > 0) {
+      remoteProducts = prodRes.data.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        sellingPrice: p.selling_price || 0,
+        costPrice: p.cost_price || 0,
+        stock: p.stock || 0,
+        trackStock: p.track_stock ?? false,
+        description: p.description || '',
+        recipeNote: p.recipe_note || '',
+        imageUri: p.image_uri || '',
+        iconName: p.icon_name || '',
+        colorHex: p.color_hex || '',
+        hasVariants: p.has_variants || false,
+        variants: typeof p.variants === 'string' ? JSON.parse(p.variants) : p.variants || [],
+        modifierGroups: typeof p.modifier_groups === 'string' ? JSON.parse(p.modifier_groups) : p.modifier_groups || [],
+        availableOutlets: typeof p.available_outlets === 'string' ? JSON.parse(p.available_outlets) : p.available_outlets || ['all'],
+        hiddenOutlets: typeof p.hidden_outlets === 'string' ? JSON.parse(p.hidden_outlets) : p.hidden_outlets || [],
+      }));
+    }
+
+    if (catRes.data && catRes.data.length > 0) {
+      const sortedCats = [...catRes.data].sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+      remoteCategories = sortedCats.map((c: any) => c.name).filter(Boolean);
+    }
+
+    if (discRes.data && discRes.data.length > 0) {
+      remoteDiscounts = discRes.data.map((d: any) => ({
+        id: d.id,
+        code: d.code,
+        name: d.name,
+        scope: d.scope || 'global_coupon',
+        type: d.type || 'percentage',
+        value: d.value || 0,
+        minPurchase: d.min_purchase || 0,
+        maxDiscount: d.max_discount || 0,
+        appliedProductIds: typeof d.applied_product_ids === 'string' ? JSON.parse(d.applied_product_ids) : d.applied_product_ids || [],
+        description: d.description || '',
+        isActive: d.is_active ?? true,
+        storeName: d.store_name,
+        userId: d.user_id,
+      }));
+    }
+
+    return { products: remoteProducts, categories: remoteCategories, discounts: remoteDiscounts };
+  } catch (e) {
+    console.warn('[OfflineDB] Error pulling remote catalog:', e);
+    return null;
+  }
 }
 
 export { KEYS };

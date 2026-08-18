@@ -1,4 +1,4 @@
-import { loadFromLocal, saveToLocal, addToSyncQueue, KEYS } from './offlineDb';
+import { loadFromLocal, saveToLocal, addToSyncQueue, pullRemoteCatalog, KEYS } from './offlineDb';
 import { getActiveSession } from './session';
 
 export interface ProductVariant {
@@ -39,16 +39,30 @@ export interface ProductItem {
   hasVariants?: boolean;
   variants?: ProductVariant[];
   modifierGroups?: ModifierGroup[];
+  storeName?: string;
+  userId?: string;
+  availableOutlets?: string[]; // Array outlet yang menjual menu ini (default: semua)
+  hiddenOutlets?: string[]; // Array outlet yang menyembunyikan menu ini
 }
+
+export type PromoScope = 'global_coupon' | 'menu_specific' | 'automatic_bill';
 
 export interface DiscountItem {
   id: string;
   code: string;
   name: string;
+  scope?: PromoScope; // 'global_coupon' | 'menu_specific' | 'automatic_bill'
   type: 'percentage' | 'fixed'; // Percentage (e.g. 10%) or Fixed (e.g. Rp 5.000)
   value: number;
   minPurchase?: number;
+  maxDiscount?: number;
+  appliedProductIds?: string[];
+  description?: string;
+  startDate?: string;
+  endDate?: string;
   isActive: boolean;
+  storeName?: string;
+  userId?: string;
 }
 
 export const INITIAL_PRODUCTS: ProductItem[] = [];
@@ -101,14 +115,22 @@ function loadAllProducts(): ProductItem[] {
   return Array.from(map.values());
 }
 
-function loadAllCategories(): string[] {
+function loadAllCategories(products?: ProductItem[]): string[] {
   const userKey = getUserKeys().categories;
   const c1 = loadFromLocal<string[]>(userKey, []);
   const c2 = loadFromLocal<string[]>(KEYS.CATEGORIES, []);
   const c3 = loadFromLocal<string[]>('soodap_categories_backup', []);
 
-  const set = new Set<string>([...c1, ...c2, ...c3].filter(Boolean));
-  return Array.from(set);
+  const prods = products || loadAllProducts();
+  const prodCategories = prods.map(p => p.category).filter(Boolean);
+
+  const initialStored = [...c1, ...c2, ...c3].filter(Boolean);
+  const merged = Array.from(new Set([...initialStored, ...prodCategories].filter(Boolean)));
+
+  if (merged.length === 0) {
+    return ['Umum', 'Makanan', 'Minuman', 'Snack', 'Coffee'];
+  }
+  return merged;
 }
 
 function loadAllDiscounts(): DiscountItem[] {
@@ -127,9 +149,10 @@ function loadAllDiscounts(): DiscountItem[] {
   return Array.from(map.values());
 }
 
+const initialLoadedProducts = loadAllProducts();
 let state: ProductStoreState = {
-  products: loadAllProducts(),
-  categories: loadAllCategories(),
+  products: initialLoadedProducts,
+  categories: loadAllCategories(initialLoadedProducts),
   discounts: loadAllDiscounts(),
   stockLogs: [],
 };
@@ -190,17 +213,40 @@ export const productStore = {
     };
   },
   addProduct: (product: Omit<ProductItem, 'id'>) => {
-    const created: ProductItem = { ...product, id: Date.now().toString() };
-    state = { ...state, products: [created, ...state.products] };
+    const session = getActiveSession();
+    const storeName = product.storeName || session?.storeName || 'Outlet Resto Utama';
+    const userId = product.userId || session?.userId || 'owner-1';
+
+    const created: ProductItem = {
+      ...product,
+      id: Date.now().toString(),
+      storeName,
+      userId,
+    };
+    const nextCategories = product.category && !state.categories.includes(product.category)
+      ? [...state.categories, product.category]
+      : state.categories;
+
+    state = {
+      ...state,
+      products: [created, ...state.products],
+      categories: nextCategories,
+    };
     persistState();
     addToSyncQueue({ table: 'products', action: 'insert', payload: created });
     listeners.forEach(cb => cb());
     return created;
   },
   updateProduct: (id: string, updatedFields: Partial<Omit<ProductItem, 'id'>>) => {
+    const updatedCategory = updatedFields.category;
+    const nextCategories = updatedCategory && !state.categories.includes(updatedCategory)
+      ? [...state.categories, updatedCategory]
+      : state.categories;
+
     state = {
       ...state,
       products: state.products.map(p => (p.id === id ? { ...p, ...updatedFields } : p)),
+      categories: nextCategories,
     };
     persistState();
     const updatedItem = state.products.find(p => p.id === id);
@@ -269,22 +315,241 @@ export const productStore = {
   addCategory: (categoryName: string) => {
     const trimmed = categoryName.trim();
     if (!trimmed || state.categories.includes(trimmed)) return false;
-    state = { ...state, categories: [...state.categories, trimmed] };
+    const nextCategories = [...state.categories, trimmed];
+    state = { ...state, categories: nextCategories };
     persistState();
+    const session = getActiveSession();
+    const storeName = session?.storeName || 'Outlet Resto Utama';
+    const userId = session?.userId || 'owner-1';
+    addToSyncQueue({
+      table: 'categories',
+      action: 'insert',
+      payload: { name: trimmed, sortOrder: nextCategories.length - 1, storeName, userId },
+    });
+    listeners.forEach(cb => cb());
+    return true;
+  },
+  moveCategory: (fromIndex: number, toIndex: number) => {
+    if (fromIndex < 0 || toIndex < 0 || fromIndex >= state.categories.length || toIndex >= state.categories.length) {
+      return false;
+    }
+    const updated = [...state.categories];
+    const [moved] = updated.splice(fromIndex, 1);
+    updated.splice(toIndex, 0, moved);
+    state = { ...state, categories: updated };
+    persistState();
+
+    const session = getActiveSession();
+    const storeName = session?.storeName || 'Outlet Resto Utama';
+    const userId = session?.userId || 'owner-1';
+
+    updated.forEach((catName, idx) => {
+      addToSyncQueue({
+        table: 'categories',
+        action: 'insert',
+        payload: { name: catName, sortOrder: idx, storeName, userId },
+      });
+    });
+
+    listeners.forEach(cb => cb());
+    return true;
+  },
+  reorderCategories: (newCategories: string[]) => {
+    state = { ...state, categories: newCategories };
+    persistState();
+
+    const session = getActiveSession();
+    const storeName = session?.storeName || 'Outlet Resto Utama';
+    const userId = session?.userId || 'owner-1';
+
+    newCategories.forEach((catName, idx) => {
+      addToSyncQueue({
+        table: 'categories',
+        action: 'insert',
+        payload: { name: catName, sortOrder: idx, storeName, userId },
+      });
+    });
+
+    listeners.forEach(cb => cb());
+  },
+  renameCategory: (oldName: string, newName: string) => {
+    const trimmedOld = oldName.trim();
+    const trimmedNew = newName.trim();
+    if (!trimmedNew || trimmedOld === trimmedNew) return false;
+    if (state.categories.includes(trimmedNew)) return false;
+
+    const session = getActiveSession();
+    const storeName = session?.storeName || 'Outlet Resto Utama';
+    const userId = session?.userId || 'owner-1';
+
+    const updatedCategories = state.categories.map(c => (c === trimmedOld ? trimmedNew : c));
+    const updatedProducts = state.products.map(p => (p.category === trimmedOld ? { ...p, category: trimmedNew } : p));
+
+    state = {
+      ...state,
+      categories: updatedCategories,
+      products: updatedProducts,
+    };
+    persistState();
+
+    const newIndex = updatedCategories.indexOf(trimmedNew);
+    addToSyncQueue({
+      table: 'categories',
+      action: 'delete',
+      payload: { name: trimmedOld, storeName, userId },
+    });
+    addToSyncQueue({
+      table: 'categories',
+      action: 'insert',
+      payload: { name: trimmedNew, sortOrder: newIndex, storeName, userId },
+    });
+
+    updatedProducts.filter(p => p.category === trimmedNew).forEach(p => {
+      addToSyncQueue({
+        table: 'products',
+        action: 'update',
+        payload: p,
+      });
+    });
+
     listeners.forEach(cb => cb());
     return true;
   },
   deleteCategory: (catName: string) => {
-    state = { ...state, categories: state.categories.filter(c => c !== catName) };
+    const session = getActiveSession();
+    const storeName = session?.storeName || 'Outlet Resto Utama';
+    const userId = session?.userId || 'owner-1';
+
+    const updatedProducts = state.products.map(p => (p.category === catName ? { ...p, category: 'Umum' } : p));
+    const updatedCategories = state.categories.filter(c => c !== catName);
+
+    state = {
+      ...state,
+      categories: updatedCategories,
+      products: updatedProducts,
+    };
     persistState();
+
+    addToSyncQueue({
+      table: 'categories',
+      action: 'delete',
+      payload: { name: catName, storeName, userId },
+    });
+
+    updatedProducts.filter(p => p.category === 'Umum').forEach(p => {
+      addToSyncQueue({
+        table: 'products',
+        action: 'update',
+        payload: p,
+      });
+    });
+
     listeners.forEach(cb => cb());
   },
+  toggleHideProductForOutlet: (productId: string, outletName: string) => {
+    state = {
+      ...state,
+      products: state.products.map(p => {
+        if (p.id !== productId) return p;
+        const currentHidden = p.hiddenOutlets || [];
+        const isHidden = currentHidden.includes(outletName);
+        const updatedHidden = isHidden
+          ? currentHidden.filter(o => o !== outletName)
+          : [...currentHidden, outletName];
+        return { ...p, hiddenOutlets: updatedHidden };
+      }),
+    };
+    persistState();
+    const updatedProd = state.products.find(p => p.id === productId);
+    if (updatedProd) {
+      addToSyncQueue({ table: 'products', action: 'update', payload: updatedProd });
+    }
+    listeners.forEach(cb => cb());
+  },
+  syncWithSupabase: async () => {
+    try {
+      const remote = await pullRemoteCatalog();
+      if (!remote) return;
+
+      let changed = false;
+
+      // Merge remote categories
+      if (remote.categories && remote.categories.length > 0) {
+        const mergedCategories = Array.from(new Set([...state.categories, ...remote.categories].filter(Boolean)));
+        if (mergedCategories.length !== state.categories.length) {
+          state.categories = mergedCategories;
+          changed = true;
+        }
+      }
+
+      // Merge remote products
+      if (remote.products && remote.products.length > 0) {
+        const productMap = new Map<string, ProductItem>();
+        // Add remote products first
+        remote.products.forEach(p => {
+          if (p && p.id) productMap.set(p.id, p);
+        });
+        // Override / keep local products (offline-first priority)
+        state.products.forEach(p => {
+          if (p && p.id) productMap.set(p.id, p);
+        });
+
+        const mergedProducts = Array.from(productMap.values());
+        if (mergedProducts.length !== state.products.length) {
+          state.products = mergedProducts;
+          changed = true;
+        }
+      }
+
+      // Merge remote discounts
+      if (remote.discounts && remote.discounts.length > 0) {
+        const discountMap = new Map<string, DiscountItem>();
+        // Add remote discounts first
+        remote.discounts.forEach(d => {
+          if (d && d.id) discountMap.set(d.id, d);
+        });
+        // Override / keep local discounts (offline-first priority)
+        state.discounts.forEach(d => {
+          if (d && d.id) discountMap.set(d.id, d);
+        });
+
+        const mergedDiscounts = Array.from(discountMap.values());
+        if (mergedDiscounts.length !== state.discounts.length) {
+          state.discounts = mergedDiscounts;
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        persistState();
+        listeners.forEach(cb => cb());
+      }
+    } catch (e) {
+      console.warn('[ProductStore] Remote sync warning:', e);
+    }
+  },
   addDiscount: (discount: Omit<DiscountItem, 'id'>) => {
-    const created: DiscountItem = { ...discount, id: Date.now().toString() };
+    const session = getActiveSession();
+    const storeName = session?.storeName || 'Outlet Resto Utama';
+    const userId = session?.userId || 'owner-1';
+    const created: DiscountItem = { ...discount, id: Date.now().toString(), storeName, userId };
     state = { ...state, discounts: [created, ...state.discounts] };
     persistState();
+    addToSyncQueue({ table: 'discounts', action: 'insert', payload: created });
     listeners.forEach(cb => cb());
     return created;
+  },
+  updateDiscount: (id: string, updatedFields: Partial<Omit<DiscountItem, 'id'>>) => {
+    state = {
+      ...state,
+      discounts: state.discounts.map(d => (d.id === id ? { ...d, ...updatedFields } : d)),
+    };
+    persistState();
+    const updatedDisc = state.discounts.find(d => d.id === id);
+    if (updatedDisc) {
+      addToSyncQueue({ table: 'discounts', action: 'update', payload: updatedDisc });
+    }
+    listeners.forEach(cb => cb());
   },
   toggleDiscount: (id: string) => {
     state = {
@@ -292,11 +557,21 @@ export const productStore = {
       discounts: state.discounts.map(d => (d.id === id ? { ...d, isActive: !d.isActive } : d)),
     };
     persistState();
+    const updatedDisc = state.discounts.find(d => d.id === id);
+    if (updatedDisc) {
+      addToSyncQueue({ table: 'discounts', action: 'update', payload: updatedDisc });
+    }
     listeners.forEach(cb => cb());
   },
   deleteDiscount: (id: string) => {
     state = { ...state, discounts: state.discounts.filter(d => d.id !== id) };
     persistState();
+    addToSyncQueue({ table: 'discounts', action: 'delete', payload: { id } });
     listeners.forEach(cb => cb());
   },
 };
+
+// Background initial sync from Supabase when connected
+setTimeout(() => {
+  productStore.syncWithSupabase();
+}, 1000);
